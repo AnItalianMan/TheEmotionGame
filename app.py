@@ -85,42 +85,58 @@ class Bot:
         updater.start_polling()
 
     def in_game(self, chat_id):
-        for game in self.__games:
-            if game.giocatore1 == chat_id or game.giocatore2 == chat_id:
-                return True, game
-        return False, None
+        if chat_id in self.__wait:
+            return True, "waiting", None
 
-    def chiedi_foto(self, g1, g2, bot):
-        bot.send_message(chat_id=g1, text="Invia una tua foto per iniziare")
-        bot.send_message(chat_id=g2, text="Invia una tua foto per iniziare")
+        for game in self.__games:
+            if game.giocatore1.chatid == chat_id:
+                return True, game, game.giocatore1
+            elif game.giocatore2.chatid == chat_id:
+                return True, game, game.giocatore2
+
+        return False, "not in game", None
 
     def check_versus(self, game, bot):
-        if game.stato_g1 == 1 and game.stato_g2 == 1:
-            #TODO gestire caso errore foto
+        if game.giocatore1.stato == 1 and game.giocatore2.stato == 1:
             azure_vision = AzureVision()
-            image = azure_vision.get_versus(BytesIO(game.data_g1), BytesIO(game.data_g2))
-            bot.send_photo(game.giocatore1, photo=BytesIO(image))
-            bot.send_photo(game.giocatore2, photo=BytesIO(image))
+            operation = azure_vision.get_versus(BytesIO(game.giocatore1.data), BytesIO(game.giocatore2.data))
+            if operation['status'] == "ok":
+                bot.send_photo(game.giocatore1.chatid, photo=BytesIO(operation['image']))
+                bot.send_photo(game.giocatore2.chatid, photo=BytesIO(operation['image']))
             #Lo stato del giocatore 1 resta ad uno perché deve inviare la foto
-            game.stato_g2 = 2
-
-            bot.send_message(chat_id=game.giocatore1, text="Invia una foto con una espressione")
-            bot.send_message(chat_id=game.giocatore2, text="Indovina l'espressione dell'altro giocatore (utilizzando un audio)")
+                game.giocatore1.stato = 2
+                game.giocatore2.stato = 3
+                bot.send_message(chat_id=game.giocatore1.chatid, text="Invia una foto con una espressione")
+                bot.send_message(chat_id=game.giocatore2.chatid,
+                                 text="Indovina l'espressione dell'altro giocatore (utilizzando un audio)")
+                game.giocatore1.data = None
+                game.giocatore2.data = None
+            else:
+                if operation['image1'] is None:
+                    game.giocatore1.stato = 0
+                    game.giocatore1.data = None
+                    bot.send_message(chat_id=game.giocatore1.chatid,
+                                     text="La foto inviata non è corretta! Inviane un'altra")
+                if operation['image2'] is None:
+                    game.giocatore2.stato = 0
+                    game.giocatore2.data = None
+                    bot.send_message(chat_id=game.giocatore2.chatid,
+                                     text="La foto inviata non è corretta! Inviane un'altra")
 
     def __photohandler(self, update, context):
         chat_id = update.effective_chat.id
-        status, game = self.in_game(chat_id)
+        status, game, giocatore = self.in_game(chat_id)
         if status:
             file = context.bot.getFile(update.message.photo[0].file_id)
             f = file.download_as_bytearray()
-            if game.giocatore1 == chat_id and game.stato_g1 == 0:
-                game.stato_g1 = 1
-                game.data_g1 = f
+
+            if giocatore.stato == 0:
+                giocatore.stato = 1
+                giocatore.data = f
+                context.bot.send_message(chat_id=giocatore.chatid,
+                                         text="La foto è stata ricevuta. Attendi il tuo avversario.")
                 self.check_versus(game, context.bot)
-            elif game.giocatore2 == chat_id and game.stato_g2 == 0:
-                game.stato_g2 = 1
-                game.data_g2 = f
-                self.check_versus(game, context.bot)
+
 
 
         #context.bot.send_message(chat_id=id, text=getprediction(BytesIO(f)))
@@ -128,7 +144,10 @@ class Bot:
     def __start(self, update, context):
         #OTTENGO IL CHAT ID
         id = update.effective_chat.id
-        status, _ = self.in_game(id)
+        context.bot.send_message(chat_id=id,
+                                 text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
+
+        status, _, _ = self.in_game(id)
         if not status:
             self.__wait.append(id)
             if len(self.__wait) == 2:
@@ -136,7 +155,8 @@ class Bot:
                 game = Game(*self.__wait)
                 self.__games.append(game)
                 self.__wait = []
-                self.chiedi_foto(game.giocatore1, game.giocatore2, context.bot)
+                context.bot.send_message(chat_id=game.giocatore1.chatid, text="Invia una tua foto per iniziare")
+                context.bot.send_message(chat_id=game.giocatore2.chatid, text="Invia una tua foto per iniziare")
 
         print(self.__games)
 

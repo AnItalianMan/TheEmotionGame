@@ -12,6 +12,19 @@ class AzureVision:
     def __init__(self):
         self.__face_client = FaceClient(self.__ENDPOINT, CognitiveServicesCredentials(self.__KEY))
 
+    def get_emotion(self, img_byte):
+
+        face = self.__get_face(img_byte)
+        emozione, score = self.__get_emotion(face.face_attributes.emotion)
+
+        if face.face_attributes.gender[0] == 'm':
+            genere = 'maschio'
+        else:
+            genere = 'femmina'
+
+        result = f'Emozione: {emozione}, score: {score}\nEtà: {face.face_attributes.age}\nGenere: {genere}'
+        return result, emozione
+
     def __get_emotion(self, emoObject):
         emoDict = dict()
         emoDict['anger'] = emoObject.anger
@@ -57,6 +70,9 @@ class AzureVision:
         face1 = self.__get_face(img1_byte)
         face2 = self.__get_face(img2_byte)
 
+        if face1 is None or face2 is None:
+            return face1, face2
+
         opened_image1 = Image.open(img1_byte)
         opened_image2 = Image.open(img2_byte)
 
@@ -75,21 +91,25 @@ class AzureVision:
 
     def get_versus(self, img1_byte, img2_byte):
         cropped1, cropped2 = self.__crop_image(img1_byte, img2_byte)
-        image = self.__get_image(cropped1, cropped2)
-        img_byte_arr = BytesIO()
-        image.save(img_byte_arr, format='PNG')
-        img_byte_arr.seek(0)
-        return_value = img_byte_arr.getvalue()
-        img_byte_arr.close()
+        if cropped1 is None or cropped2 is None:
+            return_value = {"image1": cropped1, "image2": cropped2, "status": "failed"}
+        else:
+            image = self.__get_image(cropped1, cropped2)
+            img_byte_arr = BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            img_byte_arr.seek(0)
+            return_value = {"image": img_byte_arr.getvalue(), "status": "ok"}
+            img_byte_arr.close()
+
         return return_value
 
     def __get_face(self, img_byte):
         face_attributes = ['emotion', 'age', 'gender']
         detected_faces = self.__face_client.face.detect_with_stream(img_byte, return_face_attributes=face_attributes)
         if not detected_faces:
-            raise Exception('Non sono state rilevate facce, riprova')
+            return None
         elif len(detected_faces) > 1:
-            raise Exception('Sono state rilevate troppe facce, riprova')
+            return None
 
         return detected_faces[0]
 
