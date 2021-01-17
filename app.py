@@ -133,13 +133,13 @@ class Bot:
                 if value == 0:
                     game.giocatore1.turno = 0
                     game.giocatore2.turno = 1
-                    message_g1 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\n Le emozioni possibili sono: {self.__emotion_string}"
+                    message_g1 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\nLe emozioni possibili sono: {self.__emotion_string}"
                     message_g2 = "Invia una foto con una espressione"
                 else:
                     game.giocatore1.turno = 1
                     game.giocatore2.turno = 0
                     message_g1 = "Invia una foto con una espressione"
-                    message_g2 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\n Le emozioni possibili sono: {self.__emotion_string}"
+                    message_g2 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\nLe emozioni possibili sono: {self.__emotion_string}"
 
                 bot.send_message(chat_id=game.giocatore1.chatid, text=message_g1)
                 bot.send_message(chat_id=game.giocatore2.chatid, text=message_g2)
@@ -275,25 +275,25 @@ class Bot:
                 self.__games.remove(game)
 
     def __controllo_giocatore(self, game, bot):
-        risposta = game.giocatore1.data
-        oracolo = game.giocatore2.data
+        g_deve_indovinare = game.giocatore1 if game.giocatore1.turno == 0 else game.giocatore2
+        g_indovinante = game.giocatore2 if game.giocatore2.turno == 1 else game.giocatore1
+
+        risposta = g_deve_indovinare.data
+        oracolo = g_indovinante.data
         message1 = "Non hai indovinato!"
         message2 = "Il tuo avversario non ha indovinato!"
 
         if risposta == oracolo:
-            game.giocatore1.punteggio += 1
+            g_deve_indovinare.punteggio += 1
             message1 = f"Hai indovinato!\n"
             message2 = f"Il tuo avversario ha indovinato!\n"
 
-        g_deve_indovinare = game.giocatore1 if game.giocatore1.turno == 0 else game.giocatore2
-        g_indovinante = game.giocatore2 if game.giocatore2.turno == 1 else game.giocatore1
-
         bot.send_message(chat_id=g_deve_indovinare.chatid,
-                         text=f"{message1}\nIl tuo punteggio è di {game.giocatore1.punteggio}\n"
-                              f"Il punteggio del tuo avversario è di {game.giocatore2.punteggio}\n")
+                         text=f"{message1}\nIl tuo punteggio è di {g_deve_indovinare.punteggio}\n"
+                              f"Il punteggio del tuo avversario è di {g_indovinante.punteggio}\n")
         bot.send_message(chat_id=g_indovinante.chatid,
-                         text=f"{message2}\nIl tuo punteggio è di {game.giocatore2.punteggio}\n"
-                              f"Il punteggio del tuo avversario è di {game.giocatore1.punteggio}")
+                         text=f"{message2}\nIl tuo punteggio è di {g_indovinante.punteggio}\n"
+                              f"Il punteggio del tuo avversario è di {g_deve_indovinare.punteggio}")
 
         # Se NON c'è un vincitore, continua
         if not self.__decreta_vittoria(bot, game):
