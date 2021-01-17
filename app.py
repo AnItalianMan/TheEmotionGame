@@ -9,7 +9,6 @@ from PIL import Image
 import requests
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackContext, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-
 from AzureSpeechService import AzureSpeechService
 from Game import Game
 import random
@@ -68,7 +67,7 @@ class Bot:
     def __init__(self, token: str):
         self.__TOKEN = token
         self.__emotion_string = ""
-        for emotion in [emotion for emotion in self.__emotion]:
+        for emotion in self.__emotion:
             self.__emotion_string += emotion + ", "
 
         self.__emotion_string = self.__emotion_string[0:self.__emotion_string.__len__() - 2]
@@ -222,7 +221,7 @@ class Bot:
             risposta = self.__getSpeechMessage(file_id).lower()
             if risposta in self.__emotion:
                 # 3.4 Invio il messagigo testuale in chat
-                context.bot.send_message(chat_id=update.effective_chat.id, text=risposta)
+                context.bot.send_message(chat_id=update.effective_chat.id, text=f"La tua risposta è: {risposta}")
                 print(f'[{update.message.chat.id}] {update.message.chat.username} mi ha detto {risposta}')
 
                 giocatore.data = risposta.lower()
@@ -237,38 +236,70 @@ class Bot:
             print(game.giocatore1.data)
             print(game.giocatore2.data)
             if game.giocatore1.turno == 0:
-                self.__controllo_giocatore(game.giocatore1, game.giocatore2, bot)
+                self.__controllo_giocatore(game, bot)
                 game.giocatore1.turno = 1
                 game.giocatore2.turno = 0
             else:
-                self.__controllo_giocatore(game.giocatore2, game.giocatore1, bot)
+                self.__controllo_giocatore(game, bot)
                 game.giocatore1.turno = 0
                 game.giocatore2.turno = 1
 
             game.giocatore1.stato = 0
             game.giocatore2.stato = 0
 
-    def __controllo_giocatore(self, giocatore1, giocatore2, bot):
-        risposta = giocatore1.data
-        oracolo = giocatore2.data
+    def __decreta_vittoria(self, bot, game):
+        giocatore_vincitore, giocatore_perdente = game.get_vincitore()
+        if giocatore_vincitore is not None and giocatore_perdente is not None:
+            message_vittoria = f"La partita è terminata!\nCongratulazioni, hai vinto con un punteggio di " \
+                               f"{giocatore_vincitore.punteggio}\nIl tuo avversario ha totalizzato {giocatore_perdente.punteggio} punti"
+            message_sconfitta = f"La partita è terminata!\nMi dispiace ma hai perso!\nHai realizzato un punteggio di {giocatore_perdente.punteggio}\n" \
+                                f"Il tuo avversatio ha totalizzato {giocatore_vincitore.punteggio} punti"
+
+            _, image = self.__get_winner_image(game, 0 if giocatore_vincitore.punteggio == game.maximum_score else 1)
+
+            bot.send_message(chat_id=giocatore_vincitore.chatid, text=message_vittoria)
+            bot.send_message(chat_id=giocatore_perdente.chatid, text=message_sconfitta)
+            bot.send_photo(giocatore_vincitore.chatid, photo=BytesIO(image))
+            bot.send_photo(giocatore_perdente.chatid, photo=BytesIO(image))
+
+            # Rimuovo l'istanza di game
+            self.__remove_game(giocatore_vincitore)
+
+            return True
+
+        return False
+
+    def __remove_game(self, g1):
+        for game in self.__games:
+            if g1.chatid == game.giocatore1.chatid or g1.chatid == game.giocatore1.chatid:
+                self.__games.remove(game)
+
+    def __controllo_giocatore(self, game, bot):
+        risposta = game.giocatore1.data
+        oracolo = game.giocatore2.data
         message1 = "Non hai indovinato!"
         message2 = "Il tuo avversario non ha indovinato!"
 
         if risposta == oracolo:
-            giocatore1.punteggio += 1
+            game.giocatore1.punteggio += 1
             message1 = f"Hai indovinato!\n"
             message2 = f"Il tuo avversario ha indovinato!\n"
 
-        bot.send_message(chat_id=giocatore1.chatid,
-                         text=f"{message1}\nIl tuo punteggio è di {giocatore1.punteggio}\n"
-                              f"Il punteggio del tuo avversario è di {giocatore2.punteggio}\n")
-        bot.send_message(chat_id=giocatore2.chatid,
-                         text=f"{message2}\nIl tuo punteggio è di {giocatore2.punteggio}\n"
-                              f"Il punteggio del tuo avversario è di {giocatore1.punteggio}")
+        g_deve_indovinare = game.giocatore1 if game.giocatore1.turno == 0 else game.giocatore2
+        g_indovinante = game.giocatore2 if game.giocatore2.turno == 1 else game.giocatore1
 
-        bot.send_message(chat_id=giocatore1.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'emozione")
-        bot.send_message(chat_id=giocatore2.chatid, text=f"Adesso è il tuo turno! Invia un audio in cui pronunci l'emozione dell'avversario")
-        bot.send_message(chat_id=giocatore2.chatid, text=f"Le emozioni possibili sono: {self.__emotion_string}")
+        bot.send_message(chat_id=g_deve_indovinare.chatid,
+                         text=f"{message1}\nIl tuo punteggio è di {game.giocatore1.punteggio}\n"
+                              f"Il punteggio del tuo avversario è di {game.giocatore2.punteggio}\n")
+        bot.send_message(chat_id=g_indovinante.chatid,
+                         text=f"{message2}\nIl tuo punteggio è di {game.giocatore2.punteggio}\n"
+                              f"Il punteggio del tuo avversario è di {game.giocatore1.punteggio}")
+
+        # Se NON c'è un vincitore, continua
+        if not self.__decreta_vittoria(bot, game):
+            bot.send_message(chat_id=g_deve_indovinare.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'emozione")
+            bot.send_message(chat_id=g_indovinante.chatid, text=f"Adesso è il tuo turno! Invia un audio in cui pronunci l'emozione dell'avversario")
+            bot.send_message(chat_id=g_indovinante.chatid, text=f"Le emozioni possibili sono: {self.__emotion_string}")
 
     def __getSpeechMessage(self, file_id):
         risposta = ""
