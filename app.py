@@ -1,12 +1,21 @@
+import json
 import logging
+import os
+import subprocess
 import sys
+import traceback
 from io import BytesIO
 
+import requests
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackContext, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+
+from AzureSpeechService import AzureSpeechService
 from Game import Game
 import random
 from AzureVision import AzureVision
+
+
 class HandlerFunction:
 
     def __init__(self, name: str, callback):
@@ -38,6 +47,8 @@ class HandlerFunction:
 
 
 class Bot:
+    __speechToken = "c329856f7b16498f91f591c49ca60680"
+    __emotion = ['rabbia', 'disprezzo', 'disgusto', 'paura', 'felice', 'neutro', 'tristezza', 'sorpreso']
 
     __userdata = {}
     __step = {}
@@ -56,6 +67,11 @@ class Bot:
 
     def __init__(self, token: str):
         self.__TOKEN = token
+        self.__emotion_string = ""
+        for emotion in [emotion for emotion in self.__emotion]:
+            self.__emotion_string += emotion + ", "
+
+        self.__emotion_string = self.__emotion_string[0:self.__emotion_string.__len__() - 2]
 
     def start_bot(self):
         updater = Updater(token=self.__TOKEN, use_context=True)
@@ -71,6 +87,9 @@ class Bot:
 
         unknown_handler = MessageHandler(Filters.command, self.__unknown)
         self.__dispatcher.add_handler(unknown_handler)
+
+        audio_handler = MessageHandler(Filters.voice, self.__audio_handler)
+        self.__dispatcher.add_handler(audio_handler)
 
         photo_handler = MessageHandler(Filters.photo, self.__photohandler)
         self.__dispatcher.add_handler(photo_handler)
@@ -103,12 +122,28 @@ class Bot:
             if operation['status'] == "ok":
                 bot.send_photo(game.giocatore1.chatid, photo=BytesIO(operation['image']))
                 bot.send_photo(game.giocatore2.chatid, photo=BytesIO(operation['image']))
-            #Lo stato del giocatore 1 resta ad uno perché deve inviare la foto
-                game.giocatore1.stato = 2
-                game.giocatore2.stato = 3
-                bot.send_message(chat_id=game.giocatore1.chatid, text="Invia una foto con una espressione")
-                bot.send_message(chat_id=game.giocatore2.chatid,
-                                 text="Indovina l'espressione dell'altro giocatore (utilizzando un audio)")
+
+                # Lo stato del giocatore 1 resta ad uno perché deve inviare la foto
+                game.giocatore1.stato = 0
+                game.giocatore2.stato = 0
+
+                # Imposto i turni casualmente
+                value = random.randint(0, 1)
+
+                if value == 0:
+                    game.giocatore1.turno = 0
+                    game.giocatore2.turno = 1
+                    message_g1 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\n Le emozioni possibili sono: {self.__emotion_string}"
+                    message_g2 = "Invia una foto con una espressione"
+                else:
+                    game.giocatore1.turno = 1
+                    game.giocatore2.turno = 0
+                    message_g1 = "Invia una foto con una espressione"
+                    message_g2 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\n Le emozioni possibili sono: {self.__emotion_string}"
+
+                bot.send_message(chat_id=game.giocatore1.chatid, text=message_g1)
+                bot.send_message(chat_id=game.giocatore2.chatid, text=message_g2)
+
                 game.giocatore1.data = None
                 game.giocatore2.data = None
             else:
@@ -126,18 +161,21 @@ class Bot:
     def __photohandler(self, update, context):
         chat_id = update.effective_chat.id
         status, game, giocatore = self.in_game(chat_id)
-        if status:
+        if status and (giocatore.turno is None or giocatore.turno == 1):
             file = context.bot.getFile(update.message.photo[0].file_id)
             f = file.download_as_bytearray()
+            giocatore.stato = 1
+            giocatore.data = f
+            context.bot.send_message(chat_id=giocatore.chatid,
+                                     text="La foto è stata ricevuta. Attendi il tuo avversario.")
 
-            if giocatore.stato == 0:
-                giocatore.stato = 1
-                giocatore.data = f
-                context.bot.send_message(chat_id=giocatore.chatid,
-                                         text="La foto è stata ricevuta. Attendi il tuo avversario.")
+            if giocatore.turno is None:
                 self.check_versus(game, context.bot)
-
-
+            elif giocatore.turno == 1:
+                azureVision = AzureVision()
+                result, giocatore.data = azureVision.get_emotion(BytesIO(giocatore.data))
+                context.bot.send_message(chat_id=giocatore.chatid, text=result)
+                self.check_turno(game, context.bot)
 
         #context.bot.send_message(chat_id=id, text=getprediction(BytesIO(f)))
 
@@ -160,7 +198,6 @@ class Bot:
 
         print(self.__games)
 
-
     def __register_function(self, functions: list):
         for function in functions:
             if type(function) is not HandlerFunction:
@@ -168,6 +205,122 @@ class Bot:
             # Aggiungo gli handler
             self.__dispatcher.add_handler(CommandHandler(function.name, function.callback))
 
+    def __audio_handler(self, update, context):
+        chat_id = update.effective_chat.id
+        status, game, giocatore = self.in_game(chat_id)
+        print("Turno: ", giocatore.turno)
+        if status and giocatore.turno == 0:
+            # 1. Ottengo il file id del messaggio
+            file_id = update.message['voice']['file_id']
+
+            risposta = self.__getSpeechMessage(file_id).lower()
+            if risposta in self.__emotion:
+                # 3.4 Invio il messagigo testuale in chat
+                context.bot.send_message(chat_id=update.effective_chat.id, text=risposta)
+                print(f'[{update.message.chat.id}] {update.message.chat.username} mi ha detto {risposta}')
+
+                giocatore.data = risposta.lower()
+                giocatore.stato = 1
+                self.check_turno(game, context.bot)
+            else:
+                context.bot.send_message(chat_id=update.effective_chat.id, text=f"Hai inviato {risposta}.\nnviare un'emozione corretta.")
+                context.bot.send_message(chat_id=update.effective_chat.id, text=f"Le emozioni possibili sono: {self.__emotion_string}")
+
+    def check_turno(self, game, bot):
+        if game.giocatore1.stato == 1 and game.giocatore2.stato == 1:
+            print(game.giocatore1.data)
+            print(game.giocatore2.data)
+            if game.giocatore1.turno == 0:
+                self.__controllo_giocatore(game.giocatore1, game.giocatore2, bot)
+                game.giocatore1.turno = 1
+                game.giocatore2.turno = 0
+            else:
+                self.__controllo_giocatore(game.giocatore2, game.giocatore1, bot)
+                game.giocatore1.turno = 0
+                game.giocatore2.turno = 1
+
+            game.giocatore1.stato = 0
+            game.giocatore2.stato = 0
+
+    def __controllo_giocatore(self, giocatore1, giocatore2, bot):
+        risposta = giocatore1.data
+        oracolo = giocatore2.data
+        message1 = "Non hai indovinato!"
+        message2 = "Il tuo avversario non ha indovinato!"
+
+        if risposta == oracolo:
+            giocatore1.punteggio += 1
+            message1 = f"Hai indovinato!\n"
+            message2 = f"Il tuo avversario ha indovinato!\n"
+
+        bot.send_message(chat_id=giocatore1.chatid,
+                         text=f"{message1}\nIl tuo punteggio è di {giocatore1.punteggio}\n"
+                              f"Il punteggio del tuo avversario è di {giocatore2.punteggio}\n")
+        bot.send_message(chat_id=giocatore2.chatid,
+                         text=f"{message2}\nIl tuo punteggio è di {giocatore2.punteggio}\n"
+                              f"Il punteggio del tuo avversario è di {giocatore1.punteggio}")
+
+        bot.send_message(chat_id=giocatore1.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'emozione")
+        bot.send_message(chat_id=giocatore2.chatid, text=f"Adesso è il tuo turno! Invia un audio in cui pronunci l'emozione dell'avversario")
+        bot.send_message(chat_id=giocatore2.chatid, text=f"Le emozioni possibili sono: {self.__emotion_string}")
+
+    def __getSpeechMessage(self, file_id):
+        risposta = ""
+
+        # 2. Faccio la richiesta a telegram per ottenere l'url del download
+        # https://api.telegram.org/bot<token>/getFile?file_id=<file_id>
+        request_url = f'https://api.telegram.org/bot{self.__TOKEN}/getFile?file_id={file_id}'
+        request = requests.get(url=request_url)
+        response_json = json.loads(request.text)
+
+        # 3. Se la richiesta non fallisce scarico l'audio
+        try:
+            if response_json['ok']:
+                # 3.1 La richiesta è andata bene, scarico il file
+                # https://api.telegram.org/file/bot<token>/<file_path>
+                # print(response_json['result']['file_path'])
+                request_url = f"https://api.telegram.org/file/bot{self.__TOKEN}/{response_json['result']['file_path']}"
+                request = requests.get(url=request_url)
+
+                # 3.2 Salvo il file
+                with open('audio.oga', 'wb') as file:
+                    file.write(request.content)
+
+                # 3.3 Lo converto da .oga a .wav
+                src_filename = os.path.join(os.getcwd(), 'audio.oga')
+                dest_filename = os.path.join(os.getcwd(), 'audio.wav')
+
+                # 3.3.3 Lancio un processo che esegue il programma ffmpeg per la conversione
+                process = subprocess.run(['ffmpeg', '-i', src_filename, dest_filename, "-y"])
+                if process.returncode != 0:
+                    raise Exception("Errore in ffmpeg")
+
+                # 3.4 Ottengo il testo da Azure
+                # TODO: Azure merda non chiude il file dopo che lo ha usato e non si può cancellare
+                service = AzureSpeechService(self.__speechToken)
+                try:
+                    risposta = service.speechToText(dest_filename)
+                    # Tolgo il '.' finale
+                    risposta = risposta[0:risposta.__len__() - 1]
+                except Exception as ex:
+                    risposta = "Non ho capito"
+
+                # 3.5 Cancello i file .oga e .wav
+                try:
+                    os.remove('audio.oga')
+                    os.remove('audio.wav')
+                except Exception:
+                    traceback.print_exc()
+            else:
+                # 3.2 La richiesta è fallita, non è possibile scaricare l'audio
+                risposta = "Mi dispiace, in questo momento il servizio non è disponibile. Riprova più tardi"
+
+        except Exception as ex:
+            traceback.print_exc()
+            # 4 La richiesta è fallita, non è possibile scaricare l'audio
+            risposta = "Mi dispiace, in questo momento il servizio non è disponibile. Riprova più tardi"
+        finally:
+            return risposta
 
     # def __genericHandler(self, update, context):
     #     id = update.message.from_user['id']
@@ -336,8 +489,10 @@ class Bot:
     #
     #     self.__send_message(update, context, 'Products sended')
     #
+
     def __unknown(self, update, context):
-        self.__send_message(update, context, 'Scusa, non ho capito il tuo comando')
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Scusa, non ho capito il tuo comando")
+        # self.__send_message(update, context, 'Scusa, non ho capito il tuo comando')
 
 
 if __name__ == '__main__':
@@ -345,4 +500,4 @@ if __name__ == '__main__':
         bot = Bot(sys.argv[1])
         bot.start_bot()
     except Exception as ex:
-        print("Please enter a valid Token")
+        print("[app.py] Please enter a valid Token")

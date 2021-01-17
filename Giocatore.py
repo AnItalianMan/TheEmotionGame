@@ -2,14 +2,16 @@ class Giocatore:
 
     def __init__(self, chat_id):
         self.__chatid = chat_id
-        self.punteggio = 0
+        self.__punteggio = 0
 
         #STATO = 0 -> INVIO FOTO INIZIALE
         #STATO = 1 -> ATTESA
-        #STATO = 2-> INVIO FOTO GIOCO
-        #STATO = 3 -> INVIO AUDIO
         self.__stato = 0
         self.__data = None
+
+        # TURNO = 0 -> DEVE INDOVINARE
+        # TURNO = 1 -> DEVE INVIARE LA FOTO DELL'EMOZIONE INDOVINATO
+        self.__turno = None
 
     @property
     def chatid(self): return self.__chatid
@@ -22,6 +24,14 @@ class Giocatore:
 
     @stato.setter
     def stato(self, stato: str): self.__stato = stato
+
+    @property
+    def turno(self):
+        return self.__turno
+
+    @turno.setter
+    def turno(self, turno):
+        self.__turno = turno
 
     @property
     def punteggio(self): return self.__punteggio

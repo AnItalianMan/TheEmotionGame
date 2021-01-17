@@ -4,6 +4,7 @@ from msrest.authentication import CognitiveServicesCredentials
 from math import ceil, floor
 from io import BytesIO
 
+
 class AzureVision:
 
     __KEY = "78ec8c64751b4e8aaf2201dc2bca4243"
@@ -27,14 +28,14 @@ class AzureVision:
 
     def __get_emotion(self, emoObject):
         emoDict = dict()
-        emoDict['anger'] = emoObject.anger
-        emoDict['contempt'] = emoObject.contempt
-        emoDict['disgust'] = emoObject.disgust
-        emoDict['fear'] = emoObject.fear
-        emoDict['happiness'] = emoObject.happiness
-        emoDict['neutral'] = emoObject.neutral
-        emoDict['sadness'] = emoObject.sadness
-        emoDict['surprise'] = emoObject.surprise
+        emoDict['rabbia'] = emoObject.anger
+        emoDict['disprezzo'] = emoObject.contempt
+        emoDict['disgusto'] = emoObject.disgust
+        emoDict['paura'] = emoObject.fear
+        emoDict['felice'] = emoObject.happiness
+        emoDict['neutro'] = emoObject.neutral
+        emoDict['tristezza'] = emoObject.sadness
+        emoDict['sorpreso'] = emoObject.surprise
         emo_name = max(emoDict, key=emoDict.get)
         emo_level = emoDict[emo_name]
         return emo_name, emo_level
