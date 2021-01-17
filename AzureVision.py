@@ -16,15 +16,18 @@ class AzureVision:
     def get_emotion(self, img_byte):
 
         face = self.__get_face(img_byte)
-        emozione, score = self.__get_emotion(face.face_attributes.emotion)
+        if face is not None:
+            emozione, score = self.__get_emotion(face.face_attributes.emotion)
 
-        if face.face_attributes.gender[0] == 'm':
-            genere = 'maschio'
+            if face.face_attributes.gender[0] == 'm':
+                genere = 'maschio'
+            else:
+                genere = 'femmina'
+
+            result = f'Emozione: {emozione}, score: {score}\nEtà: {face.face_attributes.age}\nGenere: {genere}'
+            return result, emozione
         else:
-            genere = 'femmina'
-
-        result = f'Emozione: {emozione}, score: {score}\nEtà: {face.face_attributes.age}\nGenere: {genere}'
-        return result, emozione
+            return "Errore", None
 
     def __get_emotion(self, emoObject):
         emoDict = dict()

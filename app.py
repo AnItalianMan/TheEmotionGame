@@ -173,9 +173,14 @@ class Bot:
                 self.check_versus(game, context.bot)
             elif giocatore.turno == 1:
                 azureVision = AzureVision()
-                result, giocatore.data = azureVision.get_emotion(BytesIO(giocatore.data))
-                context.bot.send_message(chat_id=giocatore.chatid, text=result)
-                self.check_turno(game, context.bot)
+                result, emotion = azureVision.get_emotion(BytesIO(giocatore.data))
+                if emotion is not None:
+                    giocatore.data = emotion
+                    context.bot.send_message(chat_id=giocatore.chatid, text=result)
+                    self.check_turno(game, context.bot)
+                else:
+                    giocatore.stato = 0
+                    context.bot.send_message(chat_id=giocatore.chatid, text="La foto inviata non è corretta. Inviane un'altra")
 
         #context.bot.send_message(chat_id=id, text=getprediction(BytesIO(f)))
 
@@ -223,7 +228,7 @@ class Bot:
                 giocatore.stato = 1
                 self.check_turno(game, context.bot)
             else:
-                context.bot.send_message(chat_id=update.effective_chat.id, text=f"Hai inviato {risposta}.\nnviare un'emozione corretta.")
+                context.bot.send_message(chat_id=update.effective_chat.id, text=f"Hai inviato {risposta}.\ninviare un'emozione corretta.")
                 context.bot.send_message(chat_id=update.effective_chat.id, text=f"Le emozioni possibili sono: {self.__emotion_string}")
 
     def check_turno(self, game, bot):
