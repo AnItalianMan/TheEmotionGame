@@ -5,7 +5,7 @@ import subprocess
 import sys
 import traceback
 from io import BytesIO
-
+from PIL import Image
 import requests
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackContext, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -120,6 +120,7 @@ class Bot:
             azure_vision = AzureVision()
             operation = azure_vision.get_versus(BytesIO(game.giocatore1.data), BytesIO(game.giocatore2.data))
             if operation['status'] == "ok":
+                game.foto = operation['image']
                 bot.send_photo(game.giocatore1.chatid, photo=BytesIO(operation['image']))
                 bot.send_photo(game.giocatore2.chatid, photo=BytesIO(operation['image']))
 
@@ -326,6 +327,27 @@ class Bot:
             risposta = "Mi dispiace, in questo momento il servizio non è disponibile. Riprova più tardi"
         finally:
             return risposta
+
+    def __get_winner_image(self, game, winner):
+        opened_image = Image.open(BytesIO(game.foto))
+        trophy = Image.open("trofeo.png")
+
+        dst = Image.new('RGB', (opened_image.width, opened_image.height), color='white')
+        dst.paste(opened_image, (0, 0))
+        if winner == 0:
+            dst.paste(trophy, (0, opened_image.height - trophy.height))
+        else:
+            dst.paste(trophy, (opened_image.width - trophy.width, opened_image.height - trophy.height))
+
+        img_byte_arr = BytesIO()
+        dst.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        return_value = img_byte_arr.getvalue()
+        img_byte_arr.close()
+
+        return dst, return_value
+
+
 
     # def __genericHandler(self, update, context):
     #     id = update.message.from_user['id']
