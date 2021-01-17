@@ -1,5 +1,6 @@
 from Giocatore import Giocatore
 
+
 class Game:
 
     def __init__(self, giocatore1_chatid, giocatore2_chatid):
