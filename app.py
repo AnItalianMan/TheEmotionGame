@@ -268,49 +268,23 @@ class Bot:
 
         # print(f"{giocatore.chatid} vuole usare bing search")
 
-        result = ['https://www.maxpixel.net/static/photo/1x/Upset-Woman-Person-Angry-Young-Isolated-Mad-3126437.jpg',
-                  'https://static.pexels.com/photos/266049/pexels-photo-266049.jpeg',
-                  'https://www.maxpixel.net/static/photo/1x/Crazy-Woman-Person-Mad-Upset-Irate-Young-Angry-3126441.jpg',
-                  'https://images.pexels.com/photos/3851104/pexels-photo-3851104.jpeg?cs=srgb&dl=pexels-anna-shvets-3851104.jpg&fm=jpg',
-                  'https://images.pexels.com/photos/3851104/pexels-photo-3851104.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200',
-                  'https://c.pxhere.com/photos/85/11/ballet_theater_dance_ballerina_acrobat_young_body_elegant-495741.jpg!d',
-                  'https://p0.pikist.com/photos/473/691/portrait-girl-figure-eyes-brush-delight-blonde-childhood-person-thumbnail.jpg',
-                  'https://p0.pikist.com/photos/426/99/babe-smile-newborn-small-child-boy-person-smiles-crawling-baby-thumbnail.jpg',
-                  'https://images.pexels.com/photos/984950/pexels-photo-984950.jpeg?cs=srgb&dl=accusa-arrabbiato-combattimento-coppia-984950.jpg&fm=jpg',
-                  'https://p0.pikist.com/photos/551/708/grimace-sulk-anger-girl-family-childhood-mood-child.jpg',
-                  "https://c.pxhere.com/photos/23/12/halloween_poisoned_apple_decor_all_hallow's_eve_holiday_octoberfest_trick_or_treat_spooky-1216630.jpg!d",
-                  'https://cdn.pixabay.com/photo/2018/03/18/21/47/child-3238419__180.jpg',
-                  'https://images.pexels.com/photos/2128809/pexels-photo-2128809.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-                  'https://c.pxhere.com/photos/c1/63/girl_blond_braids_face_portrait_summer_out_playing_cards-523874.jpg!s',
-                  'https://p0.pikist.com/photos/996/808/baby-kid-child-little-childhood-portrait-boy-face-thumbnail.jpg',
-                  'https://cdn.pixabay.com/photo/2016/11/24/08/24/child-1855656_640.jpg',
-                  'https://images.pexels.com/photos/5541213/pexels-photo-5541213.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-                  'https://c.pxhere.com/photos/2e/63/girl_portrait_beauty_smiles_face_eyes_marones_look_happy-816950.jpg!s',
-                  'https://images.pexels.com/photos/2723624/pexels-photo-2723624.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-                  'https://images.pexels.com/photos/2997864/pexels-photo-2997864.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-                  'https://cdn.pixabay.com/photo/2018/12/08/07/51/woman-3862936__180.png',
-                  'https://cdn.pixabay.com/photo/2015/12/05/12/33/blonde-1078069_640.jpg',
-                  'https://c.pxhere.com/photos/55/79/athlete_ball_basketball_basketball_player_court_curly_hair_game_holding-1497539.jpg!d',
-                  'https://images.pexels.com/photos/4657904/pexels-photo-4657904.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-                  'http://www.publicdomainpictures.net/pictures/160000/nahled/smile-emoticon-angry.jpg',
-                  'https://cdn.pixabay.com/photo/2017/03/26/14/07/pain-2175626_960_720.jpg',
-                  'https://c.pxhere.com/photos/43/be/action_adult_American_football_angry_athletes_ball_defense_field-1483289.jpg!d',
-                  'https://p0.pikist.com/photos/629/428/oliver-kahn-man-human-football-wax-figure-real-rage-angry-scream-thumbnail.jpg',
-                  'https://images.pexels.com/photos/279991/pexels-photo-279991.jpeg?cs=srgb&dl=arrabbiato-attivo-autorita-campo-di-addestramento-279991.jpg&fm=jpg',
-                  'https://images.pexels.com/photos/3046469/pexels-photo-3046469.jpeg?cs=srgb&dl=strada-paesaggio-moda-uomo-3046469.jpg&fm=jpg',
-                  'https://cdn.pixabay.com/photo/2012/05/02/21/22/angry-46380_960_720.png',
-                  'https://p0.pikist.com/photos/648/742/sisters-summer-child-girls-childhood-siblings-happy-children-holding-hands-hats-thumbnail.jpg',
-                  'https://cdn.pixabay.com/photo/2014/04/21/18/31/dog-329280_960_720.jpg',
-                  'https://c.pxhere.com/photos/19/ed/action_athlete_ball_basketball_basketball_player_court_game_indoors-1492133.jpg!d',
-                  'https://c.pxhere.com/photos/40/ae/athletes_ball_basketball_basketball_court_basketball_player_conversation_facial_expression_game-1492575.jpg!d'
-        ]
+        result = ['https://tse4.mm.bing.net/th?id=OIP.4jKN9sOPEM8xFcvyxBPITgHaEK&pid=Api',
+                  'https://tse3.explicit.bing.net/th?id=OIP.uzz_7NwUyiTG5Ir82EL23AHaJV&pid=Api',
+                  'https://tse4.mm.bing.net/th?id=OIP.Qd2uMLSnqxhBKjhMLQWargHaE8&pid=Api',
+                  'https://tse1.mm.bing.net/th?id=OIP.I2wJKDfbDYs9d4BcPOQmIgHaE8&pid=Api',
+                  'https://tse2.mm.bing.net/th?id=OIP.vsCKW0UYiZA9dEYyI9nOHAHaLD&pid=Api',
+                  'https://tse2.mm.bing.net/th?id=OIP.zWV5D0YW_lWrJfgSamll-wHaJD&pid=Api',
+                  'https://tse1.mm.bing.net/th?id=OIP.7ktjWUja8soGhZP-oBtvcwHaE8&pid=Api',
+                  'https://tse1.mm.bing.net/th?id=OIP.CoD1nDs_6d3rtBwG0GIw9gHaLH&pid=Api',
+                  'https://tse2.mm.bing.net/th?id=OIP.MIL2Qg8qBnuHWVkkM8RXdwHaE8&pid=Api',
+                  'https://tse4.mm.bing.net/th?id=OIP.M8GOWAgeUFo7oRsIKWm-TgHaF4&pid=Api']
 
         # s = AzureBingService(self.__bingToken)
         # print(search)
         # result = s.bingSearch(search)
         result = result[:10]
 
-        # print(result)
+        print(result)
 
         # bottoni = []
         #
