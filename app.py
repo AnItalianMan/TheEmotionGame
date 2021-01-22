@@ -1,14 +1,19 @@
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import traceback
 from io import BytesIO
+from urllib.request import urlopen
+
 from PIL import Image
 import requests
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackContext, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+
+from AzureBingService import AzureBingService
 from AzureSpeechService import AzureSpeechService
 from Game import Game
 import random
@@ -47,6 +52,8 @@ class HandlerFunction:
 
 class Bot:
     __speechToken = "c329856f7b16498f91f591c49ca60680"
+    __bingToken = "75033a4f0e21460791ac1f9ba78036b4"
+    # __speechToken = "c329856f7b16498f91f591c49ca6"
     __emotion = ['rabbia', 'disprezzo', 'disgusto', 'paura', 'felice', 'neutro', 'tristezza', 'sorpreso']
 
     __userdata = {}
@@ -54,14 +61,17 @@ class Bot:
     __handler = {}
 
     __dispatcher = None
-    __GROUP_ID = -1001344081506
+    __MARIO = 164329086
+    __ANTONIO = 397466736
 
     __TOKEN = ''
 
     __scraper_list = []
     __scraper_helper = None
 
-    __games = []
+    __games = [
+
+    ]
     __wait = []
 
     def __init__(self, token: str):
@@ -93,13 +103,14 @@ class Bot:
         photo_handler = MessageHandler(Filters.photo, self.__photohandler)
         self.__dispatcher.add_handler(photo_handler)
 
-        #HANDLER TESTO
-
-        #generic_handler = MessageHandler(Filters.text & (~Filters.command), self.__genericHandler)
-        #self.__dispatcher.add_handler(generic_handler)
+        # Handler testuale
+        text_handler = MessageHandler(Filters.text & (~Filters.command), self.__text_handler)
+        self.__dispatcher.add_handler(text_handler)
 
         #PULSANTI
-        #self.__dispatcher.add_handler(CallbackQueryHandler(self.__genericButton))
+        button_handler = CallbackQueryHandler(self.__button_handler)
+        self.__dispatcher.add_handler(button_handler)
+
         updater.start_polling()
 
     def in_game(self, chat_id):
@@ -130,19 +141,25 @@ class Bot:
                 # Imposto i turni casualmente
                 value = random.randint(0, 1)
 
+                g_deve_inviare = None
                 if value == 0:
                     game.giocatore1.turno = 0
                     game.giocatore2.turno = 1
                     message_g1 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\nLe emozioni possibili sono: {self.__emotion_string}"
                     message_g2 = "Invia una foto con una espressione"
+                    g_deve_inviare = game.giocatore2
                 else:
                     game.giocatore1.turno = 1
                     game.giocatore2.turno = 0
                     message_g1 = "Invia una foto con una espressione"
                     message_g2 = f"Indovina l'espressione dell'altro giocatore (utilizzando un audio)\nLe emozioni possibili sono: {self.__emotion_string}"
+                    g_deve_inviare = game.giocatore1
 
                 bot.send_message(chat_id=game.giocatore1.chatid, text=message_g1)
                 bot.send_message(chat_id=game.giocatore2.chatid, text=message_g2)
+                g_deve_inviare.bing_search = True
+
+                self.__ask_bing_search(bot, g_deve_inviare)
 
                 game.giocatore1.data = None
                 game.giocatore2.data = None
@@ -152,20 +169,26 @@ class Bot:
                     game.giocatore1.data = None
                     bot.send_message(chat_id=game.giocatore1.chatid,
                                      text="La foto inviata non è corretta! Inviane un'altra")
+                    game.giocatore1.bing_search = True
                 if operation['image2'] is None:
                     game.giocatore2.stato = 0
                     game.giocatore2.data = None
                     bot.send_message(chat_id=game.giocatore2.chatid,
                                      text="La foto inviata non è corretta! Inviane un'altra")
+                    game.giocatore2.bing_search = True
+                else:
+                    game.giocatore1.images = []
+                    game.giocatore2.images = []
 
-    def __photohandler(self, update, context):
+    def __photohandler(self, update, context, downloadPhoto=True):
         chat_id = update.effective_chat.id
         status, game, giocatore = self.in_game(chat_id)
         if status and (giocatore.turno is None or giocatore.turno == 1):
-            file = context.bot.getFile(update.message.photo[0].file_id)
-            f = file.download_as_bytearray()
-            giocatore.stato = 1
-            giocatore.data = f
+            if downloadPhoto:
+                file = context.bot.getFile(update.message.photo[0].file_id)
+                f = file.download_as_bytearray()
+                giocatore.stato = 1
+                giocatore.data = f
             context.bot.send_message(chat_id=giocatore.chatid,
                                      text="La foto è stata ricevuta. Attendi il tuo avversario.")
 
@@ -180,15 +203,161 @@ class Bot:
                     self.check_turno(game, context.bot)
                 else:
                     giocatore.stato = 0
-                    context.bot.send_message(chat_id=giocatore.chatid, text="La foto inviata non è corretta. Inviane un'altra")
+                    context.bot.send_message(chat_id=giocatore.chatid, text="La foto inviata non è corretta!. Inviane un'altra")
+                    giocatore.bing_search = True
 
         #context.bot.send_message(chat_id=id, text=getprediction(BytesIO(f)))
+
+    def __button_handler(self, update, context):
+        chat_id = update.effective_chat.id
+        _, game, giocatore = self.in_game(chat_id)
+
+        query = update.callback_query
+        query.answer()
+        messaggio = query.data
+
+        if messaggio == 'bingsearch':
+            giocatore.bing_search = True
+            # if giocatore.query_search is None:
+            context.bot.send_message(chat_id=chat_id, text="Digita il testo da ricercare su bing search")
+        else:
+            if not giocatore.bing_search:
+                return
+
+            context.bot.send_message(chat_id=chat_id, text=f"Hai selezionato l'immagine numero {int(messaggio) + 1}")
+            try:
+                giocatore.data = self.__get_bytes_from_image(giocatore.images[int(messaggio)])
+                giocatore.stato = 1
+                giocatore.bing_search = False
+                self.__photohandler(update, context, downloadPhoto=False)
+            except Exception as ex:
+                print(ex)
+                context.bot.send_message(chat_id=chat_id, text="L'immagine selezionata non è valida, scegline un'altra")
+                giocatore.stato = 0
+                giocatore.bing_search = True
+
+
+    def __text_handler(self, update, context):
+        chat_id = update.effective_chat.id
+        _, game, giocatore = self.in_game(chat_id)
+
+        if giocatore.bing_search:
+            giocatore.query_search = update.effective_message.text
+
+        try:
+            self.__get_images_from_bing_search(chat_id, giocatore, context.bot, giocatore.query_search)
+        except Exception as ex:
+            print(ex)
+
+    def __get_bytes_from_image(self, pic_url):
+        image = Image.open(requests.get(pic_url, stream=True).raw)
+
+        img_byte_arr = BytesIO()
+        image.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        data = img_byte_arr.getvalue()
+        img_byte_arr.close()
+
+        return data
+
+    def __get_images_from_bing_search(self, chat_id, giocatore, bot, search):
+        # print(giocatore.bing_search)
+        # Se il giocatore non può cercare ritorna
+        if not giocatore.bing_search:
+            return
+
+        # print(f"{giocatore.chatid} vuole usare bing search")
+
+        # result = ['https://www.maxpixel.net/static/photo/1x/Upset-Woman-Person-Angry-Young-Isolated-Mad-3126437.jpg',
+        #           'https://static.pexels.com/photos/266049/pexels-photo-266049.jpeg',
+        #           'https://www.maxpixel.net/static/photo/1x/Crazy-Woman-Person-Mad-Upset-Irate-Young-Angry-3126441.jpg',
+        #           'https://images.pexels.com/photos/3851104/pexels-photo-3851104.jpeg?cs=srgb&dl=pexels-anna-shvets-3851104.jpg&fm=jpg',
+        #           'https://images.pexels.com/photos/3851104/pexels-photo-3851104.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200',
+        #           'https://c.pxhere.com/photos/85/11/ballet_theater_dance_ballerina_acrobat_young_body_elegant-495741.jpg!d',
+        #           'https://p0.pikist.com/photos/473/691/portrait-girl-figure-eyes-brush-delight-blonde-childhood-person-thumbnail.jpg',
+        #           'https://p0.pikist.com/photos/426/99/babe-smile-newborn-small-child-boy-person-smiles-crawling-baby-thumbnail.jpg',
+        #           'https://images.pexels.com/photos/984950/pexels-photo-984950.jpeg?cs=srgb&dl=accusa-arrabbiato-combattimento-coppia-984950.jpg&fm=jpg',
+        #           'https://p0.pikist.com/photos/551/708/grimace-sulk-anger-girl-family-childhood-mood-child.jpg',
+        #           "https://c.pxhere.com/photos/23/12/halloween_poisoned_apple_decor_all_hallow's_eve_holiday_octoberfest_trick_or_treat_spooky-1216630.jpg!d",
+        #           'https://cdn.pixabay.com/photo/2018/03/18/21/47/child-3238419__180.jpg',
+        #           'https://images.pexels.com/photos/2128809/pexels-photo-2128809.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+        #           'https://c.pxhere.com/photos/c1/63/girl_blond_braids_face_portrait_summer_out_playing_cards-523874.jpg!s',
+        #           'https://p0.pikist.com/photos/996/808/baby-kid-child-little-childhood-portrait-boy-face-thumbnail.jpg',
+        #           'https://cdn.pixabay.com/photo/2016/11/24/08/24/child-1855656_640.jpg',
+        #           'https://images.pexels.com/photos/5541213/pexels-photo-5541213.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+        #           'https://c.pxhere.com/photos/2e/63/girl_portrait_beauty_smiles_face_eyes_marones_look_happy-816950.jpg!s',
+        #           'https://images.pexels.com/photos/2723624/pexels-photo-2723624.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+        #           'https://images.pexels.com/photos/2997864/pexels-photo-2997864.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+        #           'https://cdn.pixabay.com/photo/2018/12/08/07/51/woman-3862936__180.png',
+        #           'https://cdn.pixabay.com/photo/2015/12/05/12/33/blonde-1078069_640.jpg',
+        #           'https://c.pxhere.com/photos/55/79/athlete_ball_basketball_basketball_player_court_curly_hair_game_holding-1497539.jpg!d',
+        #           'https://images.pexels.com/photos/4657904/pexels-photo-4657904.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
+        #           'http://www.publicdomainpictures.net/pictures/160000/nahled/smile-emoticon-angry.jpg',
+        #           'https://cdn.pixabay.com/photo/2017/03/26/14/07/pain-2175626_960_720.jpg',
+        #           'https://c.pxhere.com/photos/43/be/action_adult_American_football_angry_athletes_ball_defense_field-1483289.jpg!d',
+        #           'https://p0.pikist.com/photos/629/428/oliver-kahn-man-human-football-wax-figure-real-rage-angry-scream-thumbnail.jpg',
+        #           'https://images.pexels.com/photos/279991/pexels-photo-279991.jpeg?cs=srgb&dl=arrabbiato-attivo-autorita-campo-di-addestramento-279991.jpg&fm=jpg',
+        #           'https://images.pexels.com/photos/3046469/pexels-photo-3046469.jpeg?cs=srgb&dl=strada-paesaggio-moda-uomo-3046469.jpg&fm=jpg',
+        #           'https://cdn.pixabay.com/photo/2012/05/02/21/22/angry-46380_960_720.png',
+        #           'https://p0.pikist.com/photos/648/742/sisters-summer-child-girls-childhood-siblings-happy-children-holding-hands-hats-thumbnail.jpg',
+        #           'https://cdn.pixabay.com/photo/2014/04/21/18/31/dog-329280_960_720.jpg',
+        #           'https://c.pxhere.com/photos/19/ed/action_athlete_ball_basketball_basketball_player_court_game_indoors-1492133.jpg!d',
+        #           'https://c.pxhere.com/photos/40/ae/athletes_ball_basketball_basketball_court_basketball_player_conversation_facial_expression_game-1492575.jpg!d'
+        # ]
+
+        s = AzureBingService(self.__bingToken)
+        print(search)
+        result = s.bingSearch(search)
+        result = result[:10]
+
+        # print(result)
+
+        # bottoni = []
+        #
+        # # Invio le foto e creo i bottoni per l'inine keyboard
+        # for n, foto in enumerate(result):
+        #     try:
+        #         bot.send_photo(chat_id=chat_id, photo=foto, caption=f"Foto numero {n + 1}")
+        #         bottoni.append([InlineKeyboardButton(text=f"Foto {n + 1}", callback_data=n)])
+        #     except Exception as ex:
+        #         print(ex)
+
+        keyboard = InlineKeyboardMarkup(self.__format_keyboard(giocatore, bot, chat_id, result, 4))
+
+        # Chiedo quale immagine si vuole utilizzare
+        bot.send_message(chat_id=chat_id, text="Seleziona un'immagine", reply_markup=keyboard)
+
+    def __format_keyboard(self, giocatore, bot, chat_id, result, num_elements) -> list:
+        keyboard = []
+
+        # Aggiungo i prodotti nella lista a tre alla volta
+        element = 0
+        tmp_list = []
+        contatore_reale_foto = 0
+        for indice, foto in enumerate(result):
+            try:
+                bot.send_photo(chat_id=chat_id, photo=foto, caption=f"Foto numero {contatore_reale_foto + 1}")
+                tmp_list.append(InlineKeyboardButton(text=f"Foto {contatore_reale_foto + 1}", callback_data=contatore_reale_foto))
+                giocatore.images.append(foto)
+                contatore_reale_foto += 1
+                element += 1
+                # print(f"Foto: {foto}")
+                if element == num_elements:
+                    keyboard.append(tmp_list)
+                    tmp_list = []
+                    element = 0
+            except Exception as ex:
+                print(ex)
+
+        if tmp_list.__len__() != 0:
+            keyboard.append(tmp_list)
+
+        return keyboard
 
     def __start(self, update, context):
         #OTTENGO IL CHAT ID
         id = update.effective_chat.id
-        context.bot.send_message(chat_id=id,
-                                 text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
+        context.bot.send_message(chat_id=id, text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
 
         status, _, _ = self.in_game(id)
         if not status:
@@ -201,7 +370,19 @@ class Bot:
                 context.bot.send_message(chat_id=game.giocatore1.chatid, text="Invia una tua foto per iniziare")
                 context.bot.send_message(chat_id=game.giocatore2.chatid, text="Invia una tua foto per iniziare")
 
-        print(self.__games)
+                self.__ask_bing_search(context.bot, game.giocatore1)
+                self.__ask_bing_search(context.bot, game.giocatore2)
+
+        # print(self.__games)
+
+    def __ask_bing_search(self, bot, giocatore):
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(text="Cerca su Bing", callback_data="bingsearch")]])
+
+        bot.send_message(
+            chat_id=giocatore.chatid,
+            text="Oppure utilizza bing search",
+            reply_markup=keyboard
+        )
 
     def __register_function(self, functions: list):
         for function in functions:
@@ -213,7 +394,7 @@ class Bot:
     def __audio_handler(self, update, context):
         chat_id = update.effective_chat.id
         status, game, giocatore = self.in_game(chat_id)
-        print("Turno: ", giocatore.turno)
+        # print("Turno: ", giocatore.turno)
         if status and giocatore.turno == 0:
             # 1. Ottengo il file id del messaggio
             file_id = update.message['voice']['file_id']
@@ -222,7 +403,7 @@ class Bot:
             if risposta in self.__emotion:
                 # 3.4 Invio il messagigo testuale in chat
                 context.bot.send_message(chat_id=update.effective_chat.id, text=f"La tua risposta è: {risposta}")
-                print(f'[{update.message.chat.id}] {update.message.chat.username} mi ha detto {risposta}')
+                # print(f'[{update.message.chat.id}] {update.message.chat.username} mi ha detto {risposta}')
 
                 giocatore.data = risposta.lower()
                 giocatore.stato = 1
@@ -233,8 +414,6 @@ class Bot:
 
     def check_turno(self, game, bot):
         if game.giocatore1.stato == 1 and game.giocatore2.stato == 1:
-            print(game.giocatore1.data)
-            print(game.giocatore2.data)
             if game.giocatore1.turno == 0:
                 self.__controllo_giocatore(game, bot)
                 game.giocatore1.turno = 1
@@ -297,7 +476,10 @@ class Bot:
 
         # Se NON c'è un vincitore, continua
         if not self.__decreta_vittoria(bot, game):
-            bot.send_message(chat_id=g_deve_indovinare.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'emozione")
+            bot.send_message(chat_id=g_deve_indovinare.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'espressione")
+            g_deve_indovinare.bing_search = True
+            self.__ask_bing_search(bot, g_deve_indovinare)
+
             bot.send_message(chat_id=g_indovinante.chatid, text=f"Adesso è il tuo turno! Invia un audio in cui pronunci l'emozione dell'avversario")
             bot.send_message(chat_id=g_indovinante.chatid, text=f"Le emozioni possibili sono: {self.__emotion_string}")
 

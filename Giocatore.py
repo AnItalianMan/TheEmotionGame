@@ -10,8 +10,16 @@ class Giocatore:
         self.__data = None
 
         # TURNO = 0 -> DEVE INDOVINARE
-        # TURNO = 1 -> DEVE INVIARE LA FOTO DELL'EMOZIONE INDOVINATO
+        # TURNO = 1 -> DEVE INVIARE LA FOTO DELL'EMOZIONE DA INDOVINARE
         self.__turno = None
+
+        # BING_SEARCH = TRUE -> VUOLE USARE BING SEARCH
+        self.__bing_search = False
+
+        # QUERY_SEARCH -> VALORE DA CERCARE SU BING
+        self.__query_search = None
+
+        self.__images_urls = []
 
     @property
     def chatid(self): return self.__chatid
@@ -44,3 +52,27 @@ class Giocatore:
 
     @data.setter
     def data(self, data: str): self.__data = data
+
+    @property
+    def bing_search(self):
+        return self.__bing_search
+
+    @bing_search.setter
+    def bing_search(self, bing_search):
+        self.__bing_search = bing_search
+
+    @property
+    def query_search(self):
+        return self.__query_search
+
+    @query_search.setter
+    def query_search(self, query_search):
+        self.__query_search = query_search
+
+    @property
+    def images(self):
+        return self.__images_urls
+
+    @images.setter
+    def images(self, images):
+        self.__images_urls = images
