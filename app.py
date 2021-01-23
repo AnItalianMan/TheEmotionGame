@@ -139,7 +139,6 @@ class Bot:
                 # Imposto i turni casualmente
                 value = random.randint(0, 1)
 
-                g_deve_inviare = None
                 if value == 0:
                     game.giocatore1.turno = 0
                     game.giocatore2.turno = 1
@@ -233,7 +232,6 @@ class Bot:
                 context.bot.send_message(chat_id=chat_id, text="L'immagine selezionata non è valida, scegline un'altra")
                 giocatore.stato = 0
                 giocatore.bing_search = True
-
 
     def __text_handler(self, update, context):
         chat_id = update.effective_chat.id
@@ -508,7 +506,6 @@ class Bot:
                     raise Exception("Errore in ffmpeg")
 
                 # 3.4 Ottengo il testo da Azure
-                # TODO: Azure merda non chiude il file dopo che lo ha usato e non si può cancellare
                 service = AzureSpeechService(self.__speechToken)
                 try:
                     risposta = service.speechToText(dest_filename)
