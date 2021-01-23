@@ -1,18 +1,13 @@
 import json
-import logging
 import os
-import shutil
 import subprocess
 import sys
 import traceback
 from io import BytesIO
-from urllib.request import urlopen
-
 from PIL import Image
 import requests
-from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackContext, CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-
+from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from AzureBingService import AzureBingService
 from AzureSpeechService import AzureSpeechService
 from Game import Game
@@ -45,29 +40,16 @@ class HandlerFunction:
 
     def __default_callback(self, update, context):
         id = update.message.from_user['id']
-        #username = update.message.from_user['username']
-
         context.bot.send_message(chat_id=id, text='Callback is null')
 
 
 class Bot:
     __speechToken = "c329856f7b16498f91f591c49ca60680"
     __bingToken = "75033a4f0e21460791ac1f9ba78036b4"
-    # __speechToken = "c329856f7b16498f91f591c49ca6"
     __emotion = ['rabbia', 'disprezzo', 'disgusto', 'paura', 'felice', 'neutro', 'tristezza', 'sorpreso']
 
-    __userdata = {}
-    __step = {}
-    __handler = {}
-
     __dispatcher = None
-    __MARIO = 164329086
-    __ANTONIO = 397466736
-
     __TOKEN = ''
-
-    __scraper_list = []
-    __scraper_helper = None
 
     __games = []
     __wait = []
@@ -203,8 +185,6 @@ class Bot:
                     context.bot.send_message(chat_id=giocatore.chatid, text="La foto inviata non è corretta!. Inviane un'altra")
                     giocatore.bing_search = True
 
-        #context.bot.send_message(chat_id=id, text=getprediction(BytesIO(f)))
-
     def __button_handler(self, update, context):
         chat_id = update.effective_chat.id
         _, game, giocatore = self.in_game(chat_id)
@@ -262,36 +242,20 @@ class Bot:
         if not giocatore.bing_search:
             return
 
-        # print(f"{giocatore.chatid} vuole usare bing search")
+        # result = ['https://tse4.mm.bing.net/th?id=OIP.4jKN9sOPEM8xFcvyxBPITgHaEK&pid=Api',
+        #           'https://tse3.explicit.bing.net/th?id=OIP.uzz_7NwUyiTG5Ir82EL23AHaJV&pid=Api',
+        #           'https://tse4.mm.bing.net/th?id=OIP.Qd2uMLSnqxhBKjhMLQWargHaE8&pid=Api',
+        #           'https://tse1.mm.bing.net/th?id=OIP.I2wJKDfbDYs9d4BcPOQmIgHaE8&pid=Api',
+        #           'https://tse2.mm.bing.net/th?id=OIP.vsCKW0UYiZA9dEYyI9nOHAHaLD&pid=Api',
+        #           'https://tse2.mm.bing.net/th?id=OIP.zWV5D0YW_lWrJfgSamll-wHaJD&pid=Api',
+        #           'https://tse1.mm.bing.net/th?id=OIP.7ktjWUja8soGhZP-oBtvcwHaE8&pid=Api',
+        #           'https://tse1.mm.bing.net/th?id=OIP.CoD1nDs_6d3rtBwG0GIw9gHaLH&pid=Api',
+        #           'https://tse2.mm.bing.net/th?id=OIP.MIL2Qg8qBnuHWVkkM8RXdwHaE8&pid=Api',
+        #           'https://tse4.mm.bing.net/th?id=OIP.M8GOWAgeUFo7oRsIKWm-TgHaF4&pid=Api']
 
-        result = ['https://tse4.mm.bing.net/th?id=OIP.4jKN9sOPEM8xFcvyxBPITgHaEK&pid=Api',
-                  'https://tse3.explicit.bing.net/th?id=OIP.uzz_7NwUyiTG5Ir82EL23AHaJV&pid=Api',
-                  'https://tse4.mm.bing.net/th?id=OIP.Qd2uMLSnqxhBKjhMLQWargHaE8&pid=Api',
-                  'https://tse1.mm.bing.net/th?id=OIP.I2wJKDfbDYs9d4BcPOQmIgHaE8&pid=Api',
-                  'https://tse2.mm.bing.net/th?id=OIP.vsCKW0UYiZA9dEYyI9nOHAHaLD&pid=Api',
-                  'https://tse2.mm.bing.net/th?id=OIP.zWV5D0YW_lWrJfgSamll-wHaJD&pid=Api',
-                  'https://tse1.mm.bing.net/th?id=OIP.7ktjWUja8soGhZP-oBtvcwHaE8&pid=Api',
-                  'https://tse1.mm.bing.net/th?id=OIP.CoD1nDs_6d3rtBwG0GIw9gHaLH&pid=Api',
-                  'https://tse2.mm.bing.net/th?id=OIP.MIL2Qg8qBnuHWVkkM8RXdwHaE8&pid=Api',
-                  'https://tse4.mm.bing.net/th?id=OIP.M8GOWAgeUFo7oRsIKWm-TgHaF4&pid=Api']
-
-        # s = AzureBingService(self.__bingToken)
-        # print(search)
-        # result = s.bingSearch(search)
+        s = AzureBingService(self.__bingToken)
+        result = s.bingSearch(search)
         result = result[:10]
-
-        print(result)
-
-        # bottoni = []
-        #
-        # # Invio le foto e creo i bottoni per l'inine keyboard
-        # for n, foto in enumerate(result):
-        #     try:
-        #         bot.send_photo(chat_id=chat_id, photo=foto, caption=f"Foto numero {n + 1}")
-        #         bottoni.append([InlineKeyboardButton(text=f"Foto {n + 1}", callback_data=n)])
-        #     except Exception as ex:
-        #         print(ex)
-
         keyboard = InlineKeyboardMarkup(self.__format_keyboard(giocatore, bot, chat_id, result, 4))
 
         # Chiedo quale immagine si vuole utilizzare
@@ -338,8 +302,8 @@ class Bot:
                 msg2 = f"Hai annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore1.punteggio}\nIl punteggio del tuo avversario {game.giocatore2.punteggio}"
                 msg1 = f"Il tuo avversario ha annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore2.punteggio}\nIl punteggio del tuo avversario {game.giocatore1.punteggio}"
 
-            context.bot.send_message(chat_id=game.giocatore1, text=msg1)
-            context.bot.send_message(chat_id=game.giocatore2, text=msg2)
+            context.bot.send_message(chat_id=game.giocatore1.chatid, text=msg1)
+            context.bot.send_message(chat_id=game.giocatore2.chatid, text=msg2)
             self.__games.remove(game)
         else:
             context.bot.send_message(chat_id=chat_id, text="Non sei in attesa di nessuna partita.")
@@ -550,179 +514,8 @@ class Bot:
 
         return dst, return_value
 
-
-
-    # def __genericHandler(self, update, context):
-    #     id = update.message.from_user['id']
-    #     self.__handler[id](update, context)
-    #     # if self.__handler[id] is not None:
-    #     #     self.__handler[id](update, context)
-    #     # else:
-    #     #     print('L\'handler è None')
-    #
-    # def __insertHandler(self, update, context):
-    #     print("=== INSERT ===")
-    #     id = update.message.from_user['id']
-    #     message = update.message.text
-    #     if id in self.__enabled_users:
-    #         if self.__step[id] == 1:
-    #             self.__userdata[id].append(message)
-    #             txt = "Inserisci il nome del prodotto"
-    #             self.__send_message(update, context, txt, id)
-    #             print(self.__userdata[id])
-    #             self.__step[id] = 2
-    #         elif self.__step[id] == 2:
-    #             self.__userdata[id].append(message)
-    #             print(self.__userdata[id])
-    #             self.__insertintofile(id)
-    #             self.__cleanVariables(id)
-    #             self.__send_message(update, context, "Prodotto inserito correttamente.", id)
-    #
-    # def __insertintofile(self, id):
-    #     input_file = "files/" + self.__userdata[id][0] + "_product_list.txt"
-    #     #print(input_file)
-    #     with open(input_file, "a") as file:
-    #         insertstring = "\n" + self.__userdata[id][1] + "|%!|" + self.__userdata[id][2]
-    #         print(insertstring)
-    #         file.write(insertstring)
-    #
-    # def __genericButton(self, update: Update, context: CallbackContext):
-    #     id = update.callback_query.message.chat.id
-    #     if self.__handler[id] == self.__insertHandler:
-    #         self.__buttonInsert(update, context)
-    #     elif self.__handler[id] == self.__buttonRemove:
-    #         self.__buttonRemove(update, context)
-    #
-    # def __buttonInsert(self, update: Update, context: CallbackContext) -> None:
-    #     id = update.callback_query.message.chat.id
-    #     self.__step[id] = 1
-    #     query = update.callback_query
-    #     # CallbackQueries need to be answered, even if no notification to the user is needed
-    #     # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-    #     query.answer()
-    #     self.__userdata[id].append(query.data)
-    #     print(self.__userdata[id])
-    #     query.edit_message_text(text="Inserisci l'url di {}".format(query.data))
-    #
-    # def __buttonRemove(self, update: Update, context: CallbackContext):
-    #     id = update.callback_query.message.chat.id
-    #     query = update.callback_query
-    #     if self.__step[id] == 0:
-    #         # CallbackQueries need to be answered, even if no notification to the user is needed
-    #         # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
-    #         input_file = "files/" + query.data + "_product_list.txt"
-    #
-    #         prodotti = FileUtility.readFromFile(input_file)
-    #
-    #         reply_markup = InlineKeyboardMarkup(self.__format_keyboard(prodotti, 2))
-    #
-    #         bot = context.bot
-    #         bot.edit_message_text(
-    #             chat_id=query.message.chat_id,
-    #             message_id=query.message.message_id,
-    #             text="Selezionare il prodotto da rimuovere:",
-    #             reply_markup=reply_markup
-    #         )
-    #
-    #         #query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(reply_markup))
-    #         #self.__last_message[id].reply_text('Selezionare il prodotto da rimuovere:', reply_markup=reply_markup)
-    #         query.answer()
-    #         self.__userdata[id].append(input_file)
-    #         self.__step[id] = 1
-    #     elif self.__step[id] == 1:
-    #         FileUtility.deleteFromFile(self.__userdata[id][0], query.data)
-    #         query.answer()
-    #         bot = context.bot
-    #         bot.edit_message_text(
-    #             chat_id=query.message.chat_id,
-    #             message_id=query.message.message_id,
-    #             text="Prodotto eliminato con successo"
-    #         )
-    #         self.__cleanVariables(id)
-    #
-    # def __format_keyboard(self, prodotti, num_elements) -> list:
-    #     keyboard = []
-    #
-    #     # Aggiungo i prodotti nella lista a tre alla volta
-    #     element = 0
-    #     tmp_list = []
-    #     for prodotto in prodotti:
-    #         tmp_list.append(InlineKeyboardButton(prodotto.nome, callback_data=prodotto.url))
-    #         element += 1
-    #         if element == num_elements:
-    #             keyboard.append(tmp_list)
-    #             tmp_list = []
-    #             element = 0
-    #
-    #     if tmp_list.__len__() != 0:
-    #         keyboard.append(tmp_list)
-    #
-    #     return keyboard
-    #
-    # def __insert(self, update, context):
-    #     id = update.message.from_user['id']
-    #     if id in self.__enabled_users:
-    #         self.__handler[id] = self.__insertHandler
-    #         self.__userdata[id] = []
-    #         self.__step[id] = 0
-    #         #self.__send_message(update, context, text="Selezionare l'ecommerce", chat_id=id)
-    #         keyboard = [
-    #             [
-    #                 InlineKeyboardButton("Amazon", callback_data='amazon'),
-    #                 InlineKeyboardButton("Eprice", callback_data='eprice'),
-    #             ],
-    #             [InlineKeyboardButton("Mediaworld", callback_data='mediaworld')],
-    #         ]
-    #
-    #         reply_markup = InlineKeyboardMarkup(keyboard)
-    #         update.message.reply_text('Selezionare l\'ecommerce:', reply_markup=reply_markup)
-    #
-    # def __delete(self, update, context):
-    #     id = update.message.from_user['id']
-    #     if id in self.__enabled_users:
-    #         self.__handler[id] = self.__buttonRemove
-    #         self.__userdata[id] = []
-    #         self.__step[id] = 0
-    #         # self.__send_message(update, context, text="Selezionare l'ecommerce", chat_id=id)
-    #         keyboard = [
-    #             [
-    #                 InlineKeyboardButton("Amazon", callback_data='amazon'),
-    #                 InlineKeyboardButton("Eprice", callback_data='eprice'),
-    #             ],
-    #             [InlineKeyboardButton("Mediaworld", callback_data='mediaworld')],
-    #         ]
-    #
-    #         reply_markup = InlineKeyboardMarkup(keyboard)
-    #         update.message.reply_text('Selezionare l\'ecommerce da rimuovere:', reply_markup=reply_markup)
-    #
-
-
-    #
-    # def __start(self, update, context):
-    #     self.__send_message(update, context, 'I\'m a bot, please talk to me!', chat_id=self.__GROUP_ID)
-    #     self.__send_message(update, context, 'Message sendend in group')
-    #
-    # def __echo(self, update, context):
-    #     self.__send_message(update, context, update.message.text)
-    #
-    # def __find_product(self, update, context):
-    #     discount = 0
-    #
-    #     for scraper in self.__scraper_list:
-    #         product_list = self.__scraper_helper.screap_from_file2(scraper, 'amazon_scraper\\amazon_multiple_product_list.txt', selector='multiple')
-    #         product_list = self.__scraper_helper.get_multiple_offers(product_list)
-    #         print('SIZE:', product_list.__len__())
-    #         for product in product_list:
-    #             info_string = self.__scraper_helper.get_info_string(product, product['discount'])
-    #             self.__send_message(update, context, info_string, chat_id=self.__GROUP_ID)
-    #             print('INFO:', info_string)
-    #
-    #     self.__send_message(update, context, 'Products sended')
-    #
-
     def __unknown(self, update, context):
         context.bot.send_message(chat_id=update.effective_chat.id, text="Scusa, non ho capito il tuo comando")
-        # self.__send_message(update, context, 'Scusa, non ho capito il tuo comando')
 
 
 if __name__ == '__main__':
