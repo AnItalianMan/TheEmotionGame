@@ -69,9 +69,7 @@ class Bot:
     __scraper_list = []
     __scraper_helper = None
 
-    __games = [
-
-    ]
+    __games = []
     __wait = []
 
     def __init__(self, token: str):
@@ -90,7 +88,7 @@ class Bot:
         # Aggiungo i comandi che iniziano con '/'
         command_list = []
         command_list.append(HandlerFunction('start', self.__start))
-        #TODO AGGIUNGERE STOP
+        command_list.append(HandlerFunction('stop', self.__stop))
 
         self.__register_function(command_list)
 
@@ -327,6 +325,27 @@ class Bot:
             keyboard.append(tmp_list)
 
         return keyboard
+
+    def __stop(self, update, context):
+        chat_id = update.effective_chat.id
+        status, game, player = self.in_game(chat_id)
+        if status and game == 'waiting':
+            self.__wait = []
+            context.bot.send_message(chat_id=chat_id, text="Hai annullato la ricerca della partita.")
+        elif status:
+            if game.giocatore1.chatid == player.chatid:
+                msg1 = f"Hai annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore1.punteggio}\nIl punteggio del tuo avversario {game.giocatore2.punteggio}"
+                msg2 = f"Il tuo avversario ha annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore2.punteggio}\nIl punteggio del tuo avversario {game.giocatore1.punteggio}"
+            else:
+                msg2 = f"Hai annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore1.punteggio}\nIl punteggio del tuo avversario {game.giocatore2.punteggio}"
+                msg1 = f"Il tuo avversario ha annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore2.punteggio}\nIl punteggio del tuo avversario {game.giocatore1.punteggio}"
+
+            context.bot.send_message(chat_id=game.giocatore1, text=msg1)
+            context.bot.send_message(chat_id=game.giocatore2, text=msg2)
+            self.__games.remove(game)
+        else:
+            context.bot.send_message(chat_id=chat_id, text="Non sei in attesa di nessuna partita.")
+
 
     def __start(self, update, context):
         #OTTENGO IL CHAT ID
