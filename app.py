@@ -13,6 +13,7 @@ from AzureSpeechService import AzureSpeechService
 from Game import Game
 import random
 from AzureVision import AzureVision
+import yaml
 
 
 class HandlerFunction:
@@ -44,18 +45,19 @@ class HandlerFunction:
 
 
 class Bot:
-    __speechToken = "c329856f7b16498f91f591c49ca60680"
-    __bingToken = "75033a4f0e21460791ac1f9ba78036b4"
     __emotion = ['rabbia', 'disprezzo', 'disgusto', 'paura', 'felice', 'neutro', 'tristezza', 'sorpreso']
 
     __dispatcher = None
-    __TOKEN = ''
+    __botToken = ''
 
     __games = []
     __wait = []
 
-    def __init__(self, token: str):
-        self.__TOKEN = token
+    def __init__(self, botToken: str, azureSpeechToken: str, azureBingToken: str, azureVisionToken: str):
+        self.__botToken = botToken
+        self.__azureSpeechToken = azureSpeechToken
+        self.__azureBingToken = azureBingToken
+        self.__azureVisionToken = azureVisionToken
         self.__emotion_string = ""
         for emotion in self.__emotion:
             self.__emotion_string += emotion + ", "
@@ -63,7 +65,7 @@ class Bot:
         self.__emotion_string = self.__emotion_string[0:self.__emotion_string.__len__() - 2]
 
     def start_bot(self):
-        updater = Updater(token=self.__TOKEN, use_context=True)
+        updater = Updater(token=self.__botToken, use_context=True)
         #logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
         self.__dispatcher = updater.dispatcher
@@ -107,7 +109,7 @@ class Bot:
 
     def check_versus(self, game, bot):
         if game.giocatore1.stato == 1 and game.giocatore2.stato == 1:
-            azure_vision = AzureVision()
+            azure_vision = AzureVision(self.__azureVisionToken)
             operation = azure_vision.get_versus(BytesIO(game.giocatore1.data), BytesIO(game.giocatore2.data))
             if operation['status'] == "ok":
                 game.foto = operation['image']
@@ -174,7 +176,7 @@ class Bot:
             if giocatore.turno is None:
                 self.check_versus(game, context.bot)
             elif giocatore.turno == 1:
-                azureVision = AzureVision()
+                azureVision = AzureVision(self.__azureVisionToken)
                 result, emotion = azureVision.get_emotion(BytesIO(giocatore.data))
                 if emotion is not None:
                     giocatore.data = emotion
@@ -253,7 +255,7 @@ class Bot:
         #           'https://tse2.mm.bing.net/th?id=OIP.MIL2Qg8qBnuHWVkkM8RXdwHaE8&pid=Api',
         #           'https://tse4.mm.bing.net/th?id=OIP.M8GOWAgeUFo7oRsIKWm-TgHaF4&pid=Api']
 
-        s = AzureBingService(self.__bingToken)
+        s = AzureBingService(self.__azureBingToken)
         result = s.bingSearch(search)
         result = result[:10]
         keyboard = InlineKeyboardMarkup(self.__format_keyboard(giocatore, bot, chat_id, result, 4))
@@ -443,7 +445,7 @@ class Bot:
 
         # 2. Faccio la richiesta a telegram per ottenere l'url del download
         # https://api.telegram.org/bot<token>/getFile?file_id=<file_id>
-        request_url = f'https://api.telegram.org/bot{self.__TOKEN}/getFile?file_id={file_id}'
+        request_url = f'https://api.telegram.org/bot{self.__botToken}/getFile?file_id={file_id}'
         request = requests.get(url=request_url)
         response_json = json.loads(request.text)
 
@@ -453,7 +455,7 @@ class Bot:
                 # 3.1 La richiesta è andata bene, scarico il file
                 # https://api.telegram.org/file/bot<token>/<file_path>
                 # print(response_json['result']['file_path'])
-                request_url = f"https://api.telegram.org/file/bot{self.__TOKEN}/{response_json['result']['file_path']}"
+                request_url = f"https://api.telegram.org/file/bot{self.__botToken}/{response_json['result']['file_path']}"
                 request = requests.get(url=request_url)
 
                 # 3.2 Salvo il file
@@ -470,7 +472,7 @@ class Bot:
                     raise Exception("Errore in ffmpeg")
 
                 # 3.4 Ottengo il testo da Azure
-                service = AzureSpeechService(self.__speechToken)
+                service = AzureSpeechService(self.__azureSpeechToken)
                 try:
                     risposta = service.speechToText(dest_filename)
                     # Tolgo il '.' finale
@@ -520,7 +522,13 @@ class Bot:
 
 if __name__ == '__main__':
     try:
-        bot = Bot(sys.argv[1])
+        with open("config.yml") as file:
+            config = yaml.load(file, Loader=yaml.FullLoader)
+
+        # bot = Bot(config['TelegramBotToken'], config['AzureSpeechToken'], config['AzureBingToken'], config['azureVisionToken'])
+        bot = Bot(*[config[el] for el in config])
         bot.start_bot()
     except Exception as ex:
-        print("[app.py] Please enter a valid Token")
+        traceback.print_exc()
+        print("Errore durante la lettura del file")
+        print(ex)

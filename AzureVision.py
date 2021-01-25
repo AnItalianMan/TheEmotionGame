@@ -7,11 +7,11 @@ from io import BytesIO
 
 class AzureVision:
 
-    __KEY = "78ec8c64751b4e8aaf2201dc2bca4243"
     __ENDPOINT = "https://theemotiongame.cognitiveservices.azure.com/"
 
-    def __init__(self):
-        self.__face_client = FaceClient(self.__ENDPOINT, CognitiveServicesCredentials(self.__KEY))
+    def __init__(self, token):
+        self.__TOKEN = token
+        self.__face_client = FaceClient(self.__ENDPOINT, CognitiveServicesCredentials(self.__TOKEN))
 
     def get_emotion(self, img_byte):
 
