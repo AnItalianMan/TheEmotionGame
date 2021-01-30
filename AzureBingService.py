@@ -10,7 +10,7 @@ class AzureBingService:
 
         # Creo i parametri per la richiesta
         headers = {"Ocp-Apim-Subscription-Key": self.__token}
-        params = {"q": search, "license": "public", "imageType": "photo"}
+        params = {"q": search, "license": "public", "imageType": "photo", "mkt": "it-IT", "setLang": "it"}
 
         # Eseguo la richiesta
         response = requests.get(search_url, headers=headers, params=params)

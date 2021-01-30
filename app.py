@@ -270,6 +270,8 @@ class Bot:
         element = 0
         tmp_list = []
         contatore_reale_foto = 0
+        # Svuoto la vecchia lista di immagini
+        giocatore.images = []
         for indice, foto in enumerate(result):
             try:
                 bot.send_photo(chat_id=chat_id, photo=foto, caption=f"Foto numero {contatore_reale_foto + 1}")
@@ -391,7 +393,8 @@ class Bot:
             message_sconfitta = f"La partita è terminata!\nMi dispiace ma hai perso!\nHai realizzato un punteggio di {giocatore_perdente.punteggio}\n" \
                                 f"Il tuo avversatio ha totalizzato {giocatore_vincitore.punteggio} punti"
 
-            _, image = self.__get_winner_image(game, 0 if giocatore_vincitore.punteggio == game.maximum_score else 1)
+            # _, image = self.__get_winner_image(game, 0 if giocatore_vincitore.punteggio == game.maximum_score else 1)
+            _, image = self.__get_winner_image(game, 0 if giocatore_vincitore == game.giocatore1 else 1)
 
             bot.send_message(chat_id=giocatore_vincitore.chatid, text=message_vittoria)
             bot.send_message(chat_id=giocatore_perdente.chatid, text=message_sconfitta)
@@ -431,10 +434,13 @@ class Bot:
                          text=f"{message2}\nIl tuo punteggio è di {g_indovinante.punteggio}\n"
                               f"Il punteggio del tuo avversario è di {g_deve_indovinare.punteggio}")
 
+        game.giocatore1.bing_search = False
+        game.giocatore2.bing_search = False
+
         # Se NON c'è un vincitore, continua
         if not self.__decreta_vittoria(bot, game):
             bot.send_message(chat_id=g_deve_indovinare.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'espressione")
-            g_deve_indovinare.bing_search = True
+            # g_deve_indovinare.bing_search = True
             self.__ask_bing_search(bot, g_deve_indovinare)
 
             bot.send_message(chat_id=g_indovinante.chatid, text=f"Adesso è il tuo turno! Invia un audio in cui pronunci l'emozione dell'avversario")
