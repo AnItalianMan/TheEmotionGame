@@ -303,8 +303,8 @@ class Bot:
                 msg1 = f"Hai annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore1.punteggio}\nIl punteggio del tuo avversario {game.giocatore2.punteggio}"
                 msg2 = f"Il tuo avversario ha annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore2.punteggio}\nIl punteggio del tuo avversario {game.giocatore1.punteggio}"
             else:
-                msg2 = f"Hai annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore1.punteggio}\nIl punteggio del tuo avversario {game.giocatore2.punteggio}"
-                msg1 = f"Il tuo avversario ha annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore2.punteggio}\nIl punteggio del tuo avversario {game.giocatore1.punteggio}"
+                msg2 = f"Hai annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore2.punteggio}\nIl punteggio del tuo avversario {game.giocatore1.punteggio}"
+                msg1 = f"Il tuo avversario ha annullato la partita. Punteggio finale:\nIl tuo punteggio {game.giocatore1.punteggio}\nIl punteggio del tuo avversario {game.giocatore2.punteggio}"
 
             context.bot.send_message(chat_id=game.giocatore1.chatid, text=msg1)
             context.bot.send_message(chat_id=game.giocatore2.chatid, text=msg2)
@@ -393,7 +393,6 @@ class Bot:
             message_sconfitta = f"La partita è terminata!\nMi dispiace ma hai perso!\nHai realizzato un punteggio di {giocatore_perdente.punteggio}\n" \
                                 f"Il tuo avversatio ha totalizzato {giocatore_vincitore.punteggio} punti"
 
-            # _, image = self.__get_winner_image(game, 0 if giocatore_vincitore.punteggio == game.maximum_score else 1)
             _, image = self.__get_winner_image(game, 0 if giocatore_vincitore == game.giocatore1 else 1)
 
             bot.send_message(chat_id=giocatore_vincitore.chatid, text=message_vittoria)
