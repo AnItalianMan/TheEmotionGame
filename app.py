@@ -436,7 +436,7 @@ class Bot:
 
     def __remove_game(self, g1):
         for game in self.__games:
-            if g1.chatid == game.giocatore1.chatid or g1.chatid == game.giocatore1.chatid:
+            if g1.chatid == game.giocatore1.chatid or g1.chatid == game.giocatore2.chatid:
                 self.__games.remove(game)
 
     def __controllo_giocatore(self, game, bot):
