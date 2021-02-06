@@ -1,7 +1,6 @@
 import json
 import os
 import subprocess
-import sys
 import traceback
 from io import BytesIO
 from PIL import Image
@@ -531,7 +530,7 @@ if __name__ == '__main__':
             config = yaml.load(file, Loader=yaml.FullLoader)
 
         # bot = Bot(config['TelegramBotToken'], config['AzureSpeechToken'], config['AzureBingToken'], config['azureVisionToken'])
-        bot = Bot(*[config[el] for el in config])
+        bot = Bot(*[config[key] for key in config])
         bot.start_bot()
     except Exception as ex:
         traceback.print_exc()
