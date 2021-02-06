@@ -72,7 +72,7 @@ class Bot:
         command_list = []
         command_list.append(HandlerFunction('start', self.__start))
         command_list.append(HandlerFunction('stop', self.__stop))
-
+        command_list.append(HandlerFunction('top', self.__top))
         self.__register_function(command_list)
 
         unknown_handler = MessageHandler(Filters.command, self.__unknown)
@@ -243,24 +243,16 @@ class Bot:
         if not giocatore.bing_search:
             return
 
-        # result = ['https://tse4.mm.bing.net/th?id=OIP.4jKN9sOPEM8xFcvyxBPITgHaEK&pid=Api',
-        #           'https://tse3.explicit.bing.net/th?id=OIP.uzz_7NwUyiTG5Ir82EL23AHaJV&pid=Api',
-        #           'https://tse4.mm.bing.net/th?id=OIP.Qd2uMLSnqxhBKjhMLQWargHaE8&pid=Api',
-        #           'https://tse1.mm.bing.net/th?id=OIP.I2wJKDfbDYs9d4BcPOQmIgHaE8&pid=Api',
-        #           'https://tse2.mm.bing.net/th?id=OIP.vsCKW0UYiZA9dEYyI9nOHAHaLD&pid=Api',
-        #           'https://tse2.mm.bing.net/th?id=OIP.zWV5D0YW_lWrJfgSamll-wHaJD&pid=Api',
-        #           'https://tse1.mm.bing.net/th?id=OIP.7ktjWUja8soGhZP-oBtvcwHaE8&pid=Api',
-        #           'https://tse1.mm.bing.net/th?id=OIP.CoD1nDs_6d3rtBwG0GIw9gHaLH&pid=Api',
-        #           'https://tse2.mm.bing.net/th?id=OIP.MIL2Qg8qBnuHWVkkM8RXdwHaE8&pid=Api',
-        #           'https://tse4.mm.bing.net/th?id=OIP.M8GOWAgeUFo7oRsIKWm-TgHaF4&pid=Api']
-
         s = AzureBingService(self.__azureBingToken)
         result = s.bingSearch(search)
-        result = result[:10]
-        keyboard = InlineKeyboardMarkup(self.__format_keyboard(giocatore, bot, chat_id, result, 4))
 
-        # Chiedo quale immagine si vuole utilizzare
-        bot.send_message(chat_id=chat_id, text="Seleziona un'immagine", reply_markup=keyboard)
+        if len(result) == 0:
+            bot.send_message(chat_id=chat_id, text="Non sono state trovate immagini. Prova a ricercare qualcosa di diverso!")
+        else:
+            result = result[:10]
+            keyboard = InlineKeyboardMarkup(self.__format_keyboard(giocatore, bot, chat_id, result, 4))
+            # Chiedo quale immagine si vuole utilizzare
+            bot.send_message(chat_id=chat_id, text="Seleziona un'immagine", reply_markup=keyboard)
 
     def __format_keyboard(self, giocatore, bot, chat_id, result, num_elements) -> list:
         keyboard = []
@@ -291,6 +283,16 @@ class Bot:
 
         return keyboard
 
+    def __top(self, update, context):
+        chat_id = update.effective_chat.id
+        top3 = [{"nickname": "Mario", "giocate": 3, "vinte": 2}, {"nickname": "Antonio", "giocate": 3, "vinte": 1}, {"nickname": "Gianni", "giocate": 3, "vinte": 0}]
+        result = ''
+        for dict_top in top3:
+            result += f"{dict_top['nickname']} partite giocate: {dict_top['giocate']} partite vinte: {dict_top['vinte']}\n"
+
+        context.bot.send_message(chat_id=chat_id, text=result)
+
+
     def __stop(self, update, context):
         chat_id = update.effective_chat.id
         status, game, player = self.in_game(chat_id)
@@ -315,10 +317,12 @@ class Bot:
     def __start(self, update, context):
         #OTTENGO IL CHAT ID
         id = update.effective_chat.id
-        context.bot.send_message(chat_id=id, text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
 
+        print("GENTE IN ATTESA: ", self.__wait)
+        print("PARTITE IN CORSO: ", self.__games)
         status, _, _ = self.in_game(id)
         if not status:
+            context.bot.send_message(chat_id=id, text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
             self.__wait.append(id)
             if len(self.__wait) == 2:
                 random.shuffle(self.__wait)
@@ -330,7 +334,8 @@ class Bot:
 
                 self.__ask_bing_search(context.bot, game.giocatore1)
                 self.__ask_bing_search(context.bot, game.giocatore2)
-
+        else:
+            context.bot.send_message(chat_id=id, text="Sei già in una partita! Continua a giocare o annulla la partita digitando /stop.")
         # print(self.__games)
 
     def __ask_bing_search(self, bot, giocatore):
