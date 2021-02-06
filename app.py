@@ -329,15 +329,6 @@ class Bot:
         else:
             context.bot.send_message(chat_id=chat_id, text="Non sei in attesa di nessuna partita.")
 
-
-    def __check_registered(self, chat_id):
-        if self.__database.get_data(chat_id) is not None:
-            return True
-        else:
-            return False
-
-
-
     def __start(self, update, context):
         #OTTENGO IL CHAT ID
         id = update.effective_chat.id
@@ -346,8 +337,9 @@ class Bot:
         print("PARTITE IN CORSO: ", self.__games)
         status, _, _ = self.in_game(id)
         if not status:
-            if self.__check_registered(id):
-                context.bot.send_message(chat_id=id, text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
+            player_data = self.__database.get_data(id)
+            if player_data:
+                context.bot.send_message(chat_id=id, text=f"Benvenuto al \"The Emotion Game\" {player_data['nickname']}, attendi un avversario prima di iniziare a giocare!")
                 self.__wait.append(id)
                 if len(self.__wait) == 2:
                     random.shuffle(self.__wait)
