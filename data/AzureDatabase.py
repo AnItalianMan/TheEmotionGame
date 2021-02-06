@@ -17,46 +17,39 @@ class AzureDatabase(DatabaseConnector):
             # print(f"{self.__serverName}, {self.__username}, {self.__password}, {self.__databasename}")
 
         def get_data(self, chat_id):
-            with pyodbc.connect(self.__connection_string) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(f"SELECT * FROM theemotiongame WHERE theemotiongame.ChatID='{chat_id}'")
-                    row = cursor.fetchone()
-                    if row is not None:
-                        print(f"ROW: {row}")
-                        giocatore = {
-                            'ChatID': str(row[0]),
-                            'nickname': str(row[1]),
-                            'giocate': str(row[2]),
-                            'vinte': str(row[3])
-                        }
-                        # print(giocatore)
-                        return giocatore
-                    return None
+            rows = self.__execute_query(f"SELECT * FROM theemotiongame WHERE theemotiongame.ChatID='{chat_id}'", fetchAll=True)
+            # print(f"ROW: {rows}")
+            if rows is not None and len(rows) > 0:
+                row = rows[0]
+                giocatore = {
+                    'ChatID': str(row[0]),
+                    'nickname': str(row[1]),
+                    'giocate': str(row[2]),
+                    'vinte': str(row[3])
+                }
+                # print(giocatore)
+                return giocatore
+            return None
 
         def top(self):
-            with pyodbc.connect(self.__connection_string) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(f"SELECT TOP 3 * FROM theemotiongame ORDER BY vinte DESC")
-                    giocatori = []
-                    for row in cursor.fetchall():
-                        giocatori.append({
-                            'ChatID': str(row[0]),
-                            'nickname': str(row[1]),
-                            'giocate': str(row[2]),
-                            'vinte': str(row[3])
-                        })
-                    # print(giocatore)
-                    return giocatori
+            rows = self.__execute_query(f"SELECT TOP 3 * FROM theemotiongame ORDER BY vinte DESC", fetchAll=True)
+            giocatori = []
+            for row in rows:
+                giocatori.append({
+                    'ChatID': str(row[0]),
+                    'nickname': str(row[1]),
+                    'giocate': str(row[2]),
+                    'vinte': str(row[3])
+                })
+
+            return giocatori
 
         def register(self, chat_id, nickname):
-            with pyodbc.connect(self.__connection_string) as conn:
-                with conn.cursor() as cursor:
-                    try:
-                        cursor.execute(
-                            f"INSERT INTO dbo.theemotiongame(ChatID, nickname, giocate, vinte) VALUES('{chat_id}', '{nickname}', '{0}', '{0}')")
-                        return True
-                    except Exception as ex:
-                        return False
+            try:
+                self.__execute_query(f"INSERT INTO dbo.theemotiongame(ChatID, nickname, giocate, vinte) VALUES('{chat_id}', '{nickname}', '{0}', '{0}')")
+                return True
+            except Exception as ex:
+                return False
 
         def add_partita_giocata(self, chat_id, vinta=False):
             if vinta:
@@ -64,24 +57,17 @@ class AzureDatabase(DatabaseConnector):
             else:
                 vinte = 0
 
-            with pyodbc.connect(self.__connection_string) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        f"UPDATE theemotiongame SET giocate = giocate + 1, vinte = vinte + {vinte} WHERE ChatID = '{chat_id}'")
-                    print("INSERIMENTO ESEGUITO CON SUCCESSO")
+            self.__execute_query(f"UPDATE theemotiongame SET giocate = giocate + 1, vinte = vinte + {vinte} WHERE ChatID = '{chat_id}'")
 
         def delete(self, chat_id):
-            with pyodbc.connect(self.__connection_string) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute(f"DELETE FROM theemotiongame WHERE theemotiongame.chatID='{chat_id}'")
+            self.__execute_query(f"DELETE FROM theemotiongame WHERE theemotiongame.chatID='{chat_id}'")
 
-                    print("INSERIMENTO ESEGUITO CON SUCCESSO")
-
-        def __execute_query(self, query):
+        def __execute_query(self, query, fetchAll = False):
             with pyodbc.connect(self.__connection_string) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(query)
-                    return cursor.fetchall()
+                    if fetchAll:
+                        return cursor.fetchall()
 
     instance = None
 
@@ -111,10 +97,3 @@ if __name__ == '__main__':
         # print(config["AzureDatabase"])
 
         database = AzureDatabase(*[config["AzureDatabase"][key] for key in config["AzureDatabase"]])
-        database.delete(1000)
-        # giocatori = database.top()
-        # database.get_data(0)
-        #
-        # for giocatore in giocatori:
-        #     print(giocatore)
-        # database.top()
