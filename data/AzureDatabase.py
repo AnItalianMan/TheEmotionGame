@@ -62,7 +62,7 @@ class AzureDatabase(DatabaseConnector):
         def delete(self, chat_id):
             self.__execute_query(f"DELETE FROM theemotiongame WHERE theemotiongame.chatID='{chat_id}'")
 
-        def __execute_query(self, query, fetchAll = False):
+        def __execute_query(self, query, fetchAll=False):
             with pyodbc.connect(self.__connection_string) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(query)
