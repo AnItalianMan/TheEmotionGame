@@ -15,6 +15,7 @@ from AzureVision import AzureVision
 import yaml
 from data.AzureDatabase import AzureDatabase
 
+
 class HandlerFunction:
 
     def __init__(self, name: str, callback):
@@ -55,7 +56,7 @@ class Bot:
     __is_registering = []
 
     def __init__(self, botToken: str, azureSpeechToken: str, azureBingToken: str, azureVisionToken: str, azureDatabase: dict):
-        print(azureDatabase)
+        # print(azureDatabase)
         self.__botToken = botToken
         self.__azureSpeechToken = azureSpeechToken
         self.__azureBingToken = azureBingToken

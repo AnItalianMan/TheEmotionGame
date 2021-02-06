@@ -92,8 +92,15 @@ class AzureDatabase(DatabaseConnector):
 
 
 if __name__ == '__main__':
-    with open("config.yml") as file:
+    with open("../config.yml") as file:
         config = yaml.load(file, Loader=yaml.FullLoader)
         # print(config["AzureDatabase"])
 
         database = AzureDatabase(*[config["AzureDatabase"][key] for key in config["AzureDatabase"]])
+        # database.register(192309, "AzureTeam")
+        # database.register(156878, "Cortana")
+        # database.register(786765, "Bill")
+        # database.add_partita_giocata(156878, vinta=True)
+        # database.add_partita_giocata(156878, vinta=True)
+        # database.add_partita_giocata(192309)
+        # database.add_partita_giocata(786765)
