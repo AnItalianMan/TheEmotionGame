@@ -13,7 +13,7 @@ from Game import Game
 import random
 from AzureVision import AzureVision
 import yaml
-
+from data.AzureDatabase import AzureDatabase
 
 class HandlerFunction:
 
@@ -52,12 +52,16 @@ class Bot:
     __games = []
     __wait = []
 
-    def __init__(self, botToken: str, azureSpeechToken: str, azureBingToken: str, azureVisionToken: str):
+    __is_registering = []
+
+    def __init__(self, botToken: str, azureSpeechToken: str, azureBingToken: str, azureVisionToken: str, azureDatabase: dict):
+        print(azureDatabase)
         self.__botToken = botToken
         self.__azureSpeechToken = azureSpeechToken
         self.__azureBingToken = azureBingToken
         self.__azureVisionToken = azureVisionToken
         self.__emotion_string = ""
+        self.__database = AzureDatabase(*[azureDatabase[key] for key in azureDatabase])
         for emotion in self.__emotion:
             self.__emotion_string += emotion + ", "
 
@@ -216,15 +220,23 @@ class Bot:
 
     def __text_handler(self, update, context):
         chat_id = update.effective_chat.id
-        _, game, giocatore = self.in_game(chat_id)
+        status, game, giocatore = self.in_game(chat_id)
 
-        if giocatore.bing_search:
+        if status and giocatore.bing_search:
             giocatore.query_search = update.effective_message.text
 
-        try:
-            self.__get_images_from_bing_search(chat_id, giocatore, context.bot, giocatore.query_search)
-        except Exception as ex:
-            print(ex)
+            try:
+                self.__get_images_from_bing_search(chat_id, giocatore, context.bot, giocatore.query_search)
+            except Exception as ex:
+                print(ex)
+        elif chat_id in self.__is_registering:
+            nickname = update.effective_message.text
+
+            if self.__database.register(chat_id, nickname):
+                self.__is_registering.remove(chat_id)
+                context.bot.send_message(chat_id=chat_id, text="La registrazione è avvenuta correttamente! Puoi ora iniziare a giocare digitando /start")
+            else:
+                context.bot.send_message(chat_id=chat_id, text="Il nickname inserito non è corretto, inseriscine un altro!")
 
     def __get_bytes_from_image(self, pic_url):
         image = Image.open(requests.get(pic_url, stream=True).raw)
@@ -284,11 +296,15 @@ class Bot:
         return keyboard
 
     def __top(self, update, context):
+
         chat_id = update.effective_chat.id
-        top3 = [{"nickname": "Mario", "giocate": 3, "vinte": 2}, {"nickname": "Antonio", "giocate": 3, "vinte": 1}, {"nickname": "Gianni", "giocate": 3, "vinte": 0}]
+        top3 = self.__database.top()
         result = ''
-        for dict_top in top3:
-            result += f"{dict_top['nickname']} partite giocate: {dict_top['giocate']} partite vinte: {dict_top['vinte']}\n"
+        if top3 is None or len(top3) == 0:
+            result = "Non sono ancora presenti vincitori. Inizia una partita, il primo potresti essere tu!"
+        else:
+            for i, dict_top in enumerate(top3):
+                result += f"{i+1}. {dict_top['nickname']}\n\t\t\tpartite giocate: {dict_top['giocate']}\n\t\t\tpartite vinte: {dict_top['vinte']}\n"
 
         context.bot.send_message(chat_id=chat_id, text=result)
 
@@ -314,6 +330,14 @@ class Bot:
             context.bot.send_message(chat_id=chat_id, text="Non sei in attesa di nessuna partita.")
 
 
+    def __check_registered(self, chat_id):
+        if self.__database.get_data(chat_id) is not None:
+            return True
+        else:
+            return False
+
+
+
     def __start(self, update, context):
         #OTTENGO IL CHAT ID
         id = update.effective_chat.id
@@ -322,18 +346,23 @@ class Bot:
         print("PARTITE IN CORSO: ", self.__games)
         status, _, _ = self.in_game(id)
         if not status:
-            context.bot.send_message(chat_id=id, text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
-            self.__wait.append(id)
-            if len(self.__wait) == 2:
-                random.shuffle(self.__wait)
-                game = Game(*self.__wait)
-                self.__games.append(game)
-                self.__wait = []
-                context.bot.send_message(chat_id=game.giocatore1.chatid, text="Invia una tua foto per iniziare")
-                context.bot.send_message(chat_id=game.giocatore2.chatid, text="Invia una tua foto per iniziare")
+            if self.__check_registered(id):
+                context.bot.send_message(chat_id=id, text="Benvenuto al \"The Emotion Game\", attendi un avversario prima di iniziare a giocare!")
+                self.__wait.append(id)
+                if len(self.__wait) == 2:
+                    random.shuffle(self.__wait)
+                    game = Game(*self.__wait)
+                    self.__games.append(game)
+                    self.__wait = []
+                    context.bot.send_message(chat_id=game.giocatore1.chatid, text="Invia una tua foto per iniziare")
+                    context.bot.send_message(chat_id=game.giocatore2.chatid, text="Invia una tua foto per iniziare")
 
-                self.__ask_bing_search(context.bot, game.giocatore1)
-                self.__ask_bing_search(context.bot, game.giocatore2)
+                    self.__ask_bing_search(context.bot, game.giocatore1)
+                    self.__ask_bing_search(context.bot, game.giocatore2)
+            else:
+                # DEVE REGISTRARSI
+                context.bot.send_message(chat_id=id, text="Devi registrarti per poter giocare. Inserisci un nickname per registrarti!")
+                self.__is_registering.append(id)
         else:
             context.bot.send_message(chat_id=id, text="Sei già in una partita! Continua a giocare o annulla la partita digitando /stop.")
         # print(self.__games)
@@ -404,6 +433,8 @@ class Bot:
             bot.send_photo(giocatore_vincitore.chatid, photo=BytesIO(image))
             bot.send_photo(giocatore_perdente.chatid, photo=BytesIO(image))
 
+            self.__database.add_partita_giocata(giocatore_vincitore.chatid, True)
+            self.__database.add_partita_giocata(giocatore_perdente.chatid, False)
             # Rimuovo l'istanza di game
             self.__remove_game(giocatore_vincitore)
 
