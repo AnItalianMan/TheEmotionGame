@@ -5,7 +5,7 @@ class DatabaseConnector:
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def connect(self):
+    def get_data(self, chat_id):
         raise NotImplementedError
 
     @abstractmethod
@@ -13,9 +13,9 @@ class DatabaseConnector:
         raise NotImplementedError
 
     @abstractmethod
-    def get_data(self, chat_id):
+    def register(self, chat_id, nickname):
         raise NotImplementedError
 
     @abstractmethod
-    def register(self, chat_id, nickname):
+    def add_partita_giocata(self, chat_id, vinta=False):
         raise NotImplementedError

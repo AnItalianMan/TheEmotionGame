@@ -5,5 +5,5 @@ AzureVisionToken: 78ec8c64751b4e8aaf2201dc2bca4243
 AzureDatabase:
   Servername: theemotiongamedb.database.windows.net
   Username: mamo
-  Password: 49fc36ad5378fd8df9bbec894a875474
+  Password: 49fc36ad5378fd8df9bbec894a875474!
   DatabaseServerEndPoint: theemotiongamedb
