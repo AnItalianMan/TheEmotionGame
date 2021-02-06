@@ -57,7 +57,6 @@ python app.py
   
 Project will be executed and the bot been ready to play.
 You can go on Telegram bot chat and write ```/start``` to start a game.
-Run docker-compose
 
 ## :books: Rules
 The game is composed by two players: one will have to send a photo, and the another one will have to send an audio.
