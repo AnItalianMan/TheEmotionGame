@@ -11,7 +11,15 @@ This project is a simple game made for University of Salerno Cloud computing's c
 * Azure SQL server
 
 Each subscription key can be changed in ```config.yml``` file
-  
+## :bookmark_tabs: Architecture 
+
+The architecture is made up by a Telegram bot, hosted on an Azure virtual machine which is used to interact with user's devices that want to play. The bot can also
+use, when needed, Azure services like the Azure cognitive service for emotion recognizing, the Speech-to-Text service for convert the audio sent on the chat in text
+and the Azure Bing Search when the user don't want to send a personal photo and want to find it on the internet. The bot also interacts with a database, which is used
+for register user the first time they play and mantain information like the number of played games and the number of times each user wins to keep a ranking of best players.
+
+![Architettura Cloud](https://github.com/AnItalianMan/TheEmotionGame/blob/main/architettura_cloud.png)
+
 ## :gear: Installation and configuration
 First step is clone project and install requirements
 ```bash
