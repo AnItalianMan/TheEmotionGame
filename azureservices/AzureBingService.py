@@ -8,11 +8,9 @@ class AzureBingService:
     def bingSearch(self, search: str):
         search_url = "https://api.bing.microsoft.com/v7.0/images/search"
 
-        # Creo i parametri per la richiesta
         headers = {"Ocp-Apim-Subscription-Key": self.__token}
         params = {"q": search, "license": "public", "imageType": "photo", "mkt": "it-IT", "setLang": "it"}
 
-        # Eseguo la richiesta
         response = requests.get(search_url, headers=headers, params=params)
         response.raise_for_status()
         search_results = response.json()

@@ -19,5 +19,4 @@ class AzureSpeechService:
 
     def __from_mic(self):
         speech_recognizer = speechsdk.SpeechRecognizer(speech_config=self.__speech_config, language="it-IT")
-        # print("Speak into your microphone.")
         return speech_recognizer

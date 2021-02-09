@@ -7,11 +7,11 @@ from PIL import Image
 import requests
 from telegram.ext import CommandHandler, MessageHandler, Filters, Updater, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from AzureBingService import AzureBingService
-from AzureSpeechService import AzureSpeechService
-from Game import Game
+from azureservices.AzureBingService import AzureBingService
+from azureservices.AzureSpeechService import AzureSpeechService
+from beans.Game import Game
 import random
-from AzureVision import AzureVision
+from azureservices.AzureVision import AzureVision
 import yaml
 from data.AzureDatabase import AzureDatabase
 
@@ -56,7 +56,6 @@ class Bot:
     __is_registering = []
 
     def __init__(self, botToken: str, azureSpeechToken: str, azureBingToken: str, azureVisionToken: str, azureDatabase: dict):
-        # print(azureDatabase)
         self.__botToken = botToken
         self.__azureSpeechToken = azureSpeechToken
         self.__azureBingToken = azureBingToken
@@ -70,10 +69,9 @@ class Bot:
 
     def start_bot(self):
         updater = Updater(token=self.__botToken, use_context=True)
-        #logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
         self.__dispatcher = updater.dispatcher
-        # Aggiungo i comandi che iniziano con '/'
+
         command_list = []
         command_list.append(HandlerFunction('start', self.__start))
         command_list.append(HandlerFunction('stop', self.__stop))
@@ -89,11 +87,9 @@ class Bot:
         photo_handler = MessageHandler(Filters.photo, self.__photohandler)
         self.__dispatcher.add_handler(photo_handler)
 
-        # Handler testuale
         text_handler = MessageHandler(Filters.text & (~Filters.command), self.__text_handler)
         self.__dispatcher.add_handler(text_handler)
 
-        #PULSANTI
         button_handler = CallbackQueryHandler(self.__button_handler)
         self.__dispatcher.add_handler(button_handler)
 
@@ -120,11 +116,9 @@ class Bot:
                 bot.send_photo(game.giocatore1.chatid, photo=BytesIO(operation['image']))
                 bot.send_photo(game.giocatore2.chatid, photo=BytesIO(operation['image']))
 
-                # Lo stato del giocatore 1 resta ad uno perché deve inviare la foto
                 game.giocatore1.stato = 0
                 game.giocatore2.stato = 0
 
-                # Imposto i turni casualmente
                 value = random.randint(0, 1)
 
                 if value == 0:
@@ -201,7 +195,6 @@ class Bot:
 
         if messaggio == 'bingsearch':
             giocatore.bing_search = True
-            # if giocatore.query_search is None:
             context.bot.send_message(chat_id=chat_id, text="Digita il testo da ricercare su bing search")
         else:
             if not giocatore.bing_search:
@@ -251,8 +244,6 @@ class Bot:
         return data
 
     def __get_images_from_bing_search(self, chat_id, giocatore, bot, search):
-        # print(giocatore.bing_search)
-        # Se il giocatore non può cercare ritorna
         if not giocatore.bing_search:
             return
 
@@ -264,17 +255,14 @@ class Bot:
         else:
             result = result[:10]
             keyboard = InlineKeyboardMarkup(self.__format_keyboard(giocatore, bot, chat_id, result, 4))
-            # Chiedo quale immagine si vuole utilizzare
             bot.send_message(chat_id=chat_id, text="Seleziona un'immagine", reply_markup=keyboard)
 
     def __format_keyboard(self, giocatore, bot, chat_id, result, num_elements) -> list:
         keyboard = []
 
-        # Aggiungo i prodotti nella lista a tre alla volta
         element = 0
         tmp_list = []
         contatore_reale_foto = 0
-        # Svuoto la vecchia lista di immagini
         giocatore.images = []
         for indice, foto in enumerate(result):
             try:
@@ -283,7 +271,7 @@ class Bot:
                 giocatore.images.append(foto)
                 contatore_reale_foto += 1
                 element += 1
-                # print(f"Foto: {foto}")
+
                 if element == num_elements:
                     keyboard.append(tmp_list)
                     tmp_list = []
@@ -309,7 +297,6 @@ class Bot:
 
         context.bot.send_message(chat_id=chat_id, text=result)
 
-
     def __stop(self, update, context):
         chat_id = update.effective_chat.id
         status, game, player = self.in_game(chat_id)
@@ -331,11 +318,8 @@ class Bot:
             context.bot.send_message(chat_id=chat_id, text="Non sei in attesa di nessuna partita.")
 
     def __start(self, update, context):
-        #OTTENGO IL CHAT ID
         id = update.effective_chat.id
 
-        print("GENTE IN ATTESA: ", self.__wait)
-        print("PARTITE IN CORSO: ", self.__games)
         status, _, _ = self.in_game(id)
         if not status:
             player_data = self.__database.get_data(id)
@@ -353,12 +337,10 @@ class Bot:
                     self.__ask_bing_search(context.bot, game.giocatore1)
                     self.__ask_bing_search(context.bot, game.giocatore2)
             else:
-                # DEVE REGISTRARSI
                 context.bot.send_message(chat_id=id, text="Devi registrarti per poter giocare. Inserisci un nickname per registrarti!")
                 self.__is_registering.append(id)
         else:
             context.bot.send_message(chat_id=id, text="Sei già in una partita! Continua a giocare o annulla la partita digitando /stop.")
-        # print(self.__games)
 
     def __ask_bing_search(self, bot, giocatore):
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton(text="Cerca su Bing", callback_data="bingsearch")]])
@@ -373,22 +355,22 @@ class Bot:
         for function in functions:
             if type(function) is not HandlerFunction:
                 raise Exception('[ERROR] __register_function take a list of HandlerFunction objects.')
-            # Aggiungo gli handler
+
             self.__dispatcher.add_handler(CommandHandler(function.name, function.callback))
 
     def __audio_handler(self, update, context):
         chat_id = update.effective_chat.id
         status, game, giocatore = self.in_game(chat_id)
-        # print("Turno: ", giocatore.turno)
+
         if status and giocatore.turno == 0:
-            # 1. Ottengo il file id del messaggio
+
             file_id = update.message['voice']['file_id']
 
             risposta = self.__getSpeechMessage(file_id).lower()
             if risposta in self.__emotion:
-                # 3.4 Invio il messagigo testuale in chat
+
                 context.bot.send_message(chat_id=update.effective_chat.id, text=f"La tua risposta è: {risposta}")
-                # print(f'[{update.message.chat.id}] {update.message.chat.username} mi ha detto {risposta}')
+
 
                 giocatore.data = risposta.lower()
                 giocatore.stato = 1
@@ -428,7 +410,7 @@ class Bot:
 
             self.__database.add_partita_giocata(giocatore_vincitore.chatid, True)
             self.__database.add_partita_giocata(giocatore_perdente.chatid, False)
-            # Rimuovo l'istanza di game
+
             self.__remove_game(giocatore_vincitore)
 
             return True
@@ -464,10 +446,9 @@ class Bot:
         game.giocatore1.bing_search = False
         game.giocatore2.bing_search = False
 
-        # Se NON c'è un vincitore, continua
         if not self.__decreta_vittoria(bot, game):
             bot.send_message(chat_id=g_deve_indovinare.chatid, text=f"Adesso tocca a te inviare la foto! Invia una foto con un'espressione")
-            # g_deve_indovinare.bing_search = True
+
             self.__ask_bing_search(bot, g_deve_indovinare)
 
             bot.send_message(chat_id=g_indovinante.chatid, text=f"Adesso è il tuo turno! Invia un audio in cui pronunci l'emozione dell'avversario")
@@ -476,63 +457,50 @@ class Bot:
     def __getSpeechMessage(self, file_id):
         risposta = ""
 
-        # 2. Faccio la richiesta a telegram per ottenere l'url del download
-        # https://api.telegram.org/bot<token>/getFile?file_id=<file_id>
         request_url = f'https://api.telegram.org/bot{self.__botToken}/getFile?file_id={file_id}'
         request = requests.get(url=request_url)
         response_json = json.loads(request.text)
 
-        # 3. Se la richiesta non fallisce scarico l'audio
         try:
             if response_json['ok']:
-                # 3.1 La richiesta è andata bene, scarico il file
-                # https://api.telegram.org/file/bot<token>/<file_path>
-                # print(response_json['result']['file_path'])
                 request_url = f"https://api.telegram.org/file/bot{self.__botToken}/{response_json['result']['file_path']}"
                 request = requests.get(url=request_url)
 
-                # 3.2 Salvo il file
                 with open('audio.oga', 'wb') as file:
                     file.write(request.content)
 
-                # 3.3 Lo converto da .oga a .wav
                 src_filename = os.path.join(os.getcwd(), 'audio.oga')
                 dest_filename = os.path.join(os.getcwd(), 'audio.wav')
 
-                # 3.3.3 Lancio un processo che esegue il programma ffmpeg per la conversione
                 process = subprocess.run(['ffmpeg', '-i', src_filename, dest_filename, "-y"])
                 if process.returncode != 0:
                     raise Exception("Errore in ffmpeg")
 
-                # 3.4 Ottengo il testo da Azure
                 service = AzureSpeechService(self.__azureSpeechToken)
                 try:
                     risposta = service.speechToText(dest_filename)
-                    # Tolgo il '.' finale
+
                     risposta = risposta[0:risposta.__len__() - 1]
                 except Exception as ex:
                     risposta = "Non ho capito"
 
-                # 3.5 Cancello i file .oga e .wav
                 try:
                     os.remove('audio.oga')
                     os.remove('audio.wav')
                 except Exception:
                     traceback.print_exc()
             else:
-                # 3.2 La richiesta è fallita, non è possibile scaricare l'audio
                 risposta = "Mi dispiace, in questo momento il servizio non è disponibile. Riprova più tardi"
 
         except Exception as ex:
             traceback.print_exc()
-            # 4 La richiesta è fallita, non è possibile scaricare l'audio
             risposta = "Mi dispiace, in questo momento il servizio non è disponibile. Riprova più tardi"
         finally:
             return risposta
 
     def __get_winner_image(self, game, winner):
         opened_image = Image.open(BytesIO(game.foto))
-        trophy = Image.open("trofeo.png")
+        trophy = Image.open("images/trofeo.png")
 
         dst = Image.new('RGB', (opened_image.width, opened_image.height), color='white')
         dst.paste(opened_image, (0, 0))
@@ -558,7 +526,6 @@ if __name__ == '__main__':
         with open("config.yml") as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
 
-        # bot = Bot(config['TelegramBotToken'], config['AzureSpeechToken'], config['AzureBingToken'], config['azureVisionToken'])
         bot = Bot(*[config[key] for key in config])
         bot.start_bot()
     except Exception as ex:

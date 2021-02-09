@@ -1,9 +1,9 @@
-TelegramBotToken: <bot_telegram_token>
-AzureSpeechToken: <Azure_speech_to_text_subscription_key>
-AzureBingToken: <Azure_bing_search_subscription_key>
-AzureVisionToken: <Azure_computer_vision_subscription_key>
+TelegramBotToken: 1504717968:AAGko_4MoB7BFxnq_VC-mYpxXgugdxXIRmo
+AzureSpeechToken: c329856f7b16498f91f591c49ca60680
+AzureBingToken: 75033a4f0e21460791ac1f9ba78036b4
+AzureVisionToken: 78ec8c64751b4e8aaf2201dc2bca4243
 AzureDatabase:
-  DatabaseServerEndPoint: <Azure_sql_server_endpoint>
-  Username: <Azure_sql_server's_username>
-  Password: <Azure_sql_server's_password>
-  DatabaseName: <database_name>
+  DatabaseServerEndPoint: theemotiongamedb.database.windows.net
+  Username: mamo
+  Password: 49fc36ad5378fd8df9bbec894a875474!
+  DatabaseName: theemotiongamedb

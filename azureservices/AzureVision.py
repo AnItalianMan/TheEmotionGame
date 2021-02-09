@@ -53,7 +53,7 @@ class AzureVision:
 
     def __get_image(self, im1, im2):
         offset = 50
-        load_versus = Image.open("versus.png")
+        load_versus = Image.open("../images/versus.png")
         width = im1.width + load_versus.width + im2.width + offset*2
 
         if im1.height > im2.height:

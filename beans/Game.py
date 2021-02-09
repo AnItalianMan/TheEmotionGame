@@ -1,4 +1,4 @@
-from Giocatore import Giocatore
+from beans.Giocatore import Giocatore
 
 
 class Game:
@@ -20,13 +20,11 @@ class Game:
     def get_vincitore(self):
         if self.giocatore1.punteggio == self.__maximum_score:
             if self.giocatore2.punteggio == self.__maximum_score:
-                # Pareggio
                 return None, None
             else:
                 return self.giocatore1, self.giocatore2
         elif self.giocatore2.punteggio == self.__maximum_score:
             if self.giocatore1.punteggio == self.__maximum_score:
-                # Pareggio
                 return None, None
             else:
                 return self.giocatore2, self.giocatore1
