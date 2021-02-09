@@ -51,7 +51,7 @@ Keep note of all subscriptions key for these services. You will require it for t
 
 ### :musical_note: Install ffmpeg
 Go to [FFmpeg download page](https://ffmpeg.org/download.html#build-linux) and download the right ffmpeg version for your OS.
-It is required for converting telegram's audio from ```.oga```, which is the format provided from Telegram, to ```wav```.
+It is required for converting telegram's audio from ```.oga```, which is the format provided from Telegram, to ```.wav```.
 
 ```bash
 sudo apt update
@@ -67,11 +67,11 @@ TelegramBotToken: <bot_telegram_token>
 AzureSpeechToken: <Azure_speech_to_text_subscription_key>
 AzureBingToken: <Azure_bing_search_subscription_key>  
 AzureVisionToken: <Azure_computer_vision_subscription_key>  
-AzureDatabase:    
-	DatabaseServerEndPoint: <Azure_sql_server_endpoint>  
-	Username: <Azure_sql_server's_username>
-	Password: <Azure_sql_server's_password>
-	DatabaseName: <database_name>  
+AzureDatabase:
+    DatabaseServerEndPoint: <Azure_sql_server_endpoint>  
+    Username: <Azure_sql_server's_username>
+    Password: <Azure_sql_server's_password>
+    DatabaseName: <database_name>  
 ```
   
 ### :wrench: Create database  
