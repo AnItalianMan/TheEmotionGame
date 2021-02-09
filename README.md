@@ -68,10 +68,10 @@ AzureSpeechToken: <Azure_speech_to_text_subscription_key>
 AzureBingToken: <Azure_bing_search_subscription_key>  
 AzureVisionToken: <Azure_computer_vision_subscription_key>  
 AzureDatabase:
-    DatabaseServerEndPoint: <Azure_sql_server_endpoint>  
-    Username: <Azure_sql_server's_username>
-    Password: <Azure_sql_server's_password>
-    DatabaseName: <database_name>  
+  DatabaseServerEndPoint: <Azure_sql_server_endpoint>  
+  Username: <Azure_sql_server's_username>
+  Password: <Azure_sql_server's_password>
+  DatabaseName: <database_name>  
 ```
   
 ### :wrench: Create database  
