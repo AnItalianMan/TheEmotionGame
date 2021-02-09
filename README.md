@@ -16,7 +16,7 @@ use, when needed, Azure services like the Azure cognitive service for emotion re
 and the Azure Bing Search when the user don't want to send a personal photo and want to find it on the internet. The bot also interacts with a database, which is used  
 for register user the first time they play and mantain information like the number of played games and the number of times each user wins to keep a ranking of best players.  
   
-![Architettura Cloud](https://github.com/AnItalianMan/TheEmotionGame/blob/main/architettura_cloud.png)
+![Architettura Cloud](images/architettura_cloud.png)
 
 ## :boom: Prerequisites
 * An Azure subscription
@@ -27,7 +27,7 @@ for register user the first time they play and mantain information like the numb
 ## :robot: Create a telegram bot
 Go to [botfather](https://t.me/botfather) telegram bot and launch ```/newbot``` command. Insert a correct name for bot and take note of <b>token for HTTP API</b>
 
-<img src="images/creazionebot.png">
+![Architettura Cloud](images/creazionebot.png)
 
   
 ## :gear: Installation and configuration
