@@ -51,7 +51,7 @@ Keep note of all subscriptions key for these services. You will require it for t
 
 ### :musical_note: Install ffmpeg
 Go to [FFmpeg download page](https://ffmpeg.org/download.html#build-linux) and download the right ffmpeg version for your OS.
-It is required for converting telegram's audio from ```.oga```, which is the format provided from Telegram, to ```wav```.
+It is required for converting telegram's audio from ```.oga```, which is the format provided from Telegram, to ```.wav```.
 
 ```bash
 sudo apt update
