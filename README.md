@@ -1,4 +1,7 @@
-  
+# :construction_worker: Contributors
+This project is created by:
+* [AnItalianMan](https://github.com/AnItalianMan)
+*  [mariomamo](https://github.com/mariomamo)
 # :robot: The Emotion Game :cloud:    
  This project is a simple game made for University of Salerno Cloud computing's course. It use some of Microsoft Azure's services, such as:    
   
